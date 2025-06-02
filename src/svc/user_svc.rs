@@ -20,37 +20,30 @@ impl UserSvc {
     }
 
     pub async fn list(&self, condition: UserCondition) -> Result<Vec<UserVo>, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.list(condition).await
     }
     
     pub async fn page(&self, condition: UserCondition) -> Result<PageData<UserVo>, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.page(condition).await
     }
     
     pub async fn get_by_id(&self, rec_id: i64) -> Result<Option<UserVo>, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.get_by_id(rec_id).await
     }
     
     pub async fn save(&self, user_dto: UserDto) -> Result<i64, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.save(user_dto).await
     }
     
     pub async fn update_by_id(&self, user_dto: UserDto) -> Result<u64, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.update_by_id(user_dto).await
     }
     
     pub async fn delete_by_ids(&self, user_dto: UserDto) -> Result<u64, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.delete_by_ids(user_dto).await
     }
     
     pub async fn remove_by_ids(&self, user_dto: UserDto) -> Result<u64, DbErr> {
-        //let mapper = UserMapper::get_instance(Arc::new(state.clone()));
         self.mapper.remove_by_ids(user_dto).await
     }
     
