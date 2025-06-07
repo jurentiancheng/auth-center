@@ -1,7 +1,7 @@
 use std::error::Error;
 
 
-use auth_center::build_app;
+use auth_center::route::build_app_route;
 use tracing::{info, instrument};
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .with_test_writer()
     .init();
 
-    let app = build_app().await.unwrap();
+    let app = build_app_route().await.unwrap();
     let listener = tokio::net::TcpListener::bind("0.0.0.0:18080").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();

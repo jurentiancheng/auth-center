@@ -4,13 +4,12 @@ pub mod mapper;
 pub mod pojo;
 pub mod svc;
 pub mod util;
+pub mod route;
 
 use std::{error::Error, sync::Arc, time::Duration};
 
-use axum::{ http::StatusCode, routing::{get, post, put}, Json, Router
-};
+use axum::{ http::StatusCode, Json};
 
-use ctl::user_ctl::{ UserCtl };
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use util::result_struct::RespResult;
 
@@ -22,7 +21,7 @@ pub struct AppState {
     mysql_pool: DatabaseConnection
 }
 
-async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
+pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
     let db_uri = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_s| "mysql://root:root@127.0.0.1:18306/auth_center".to_string());
     let mut opt = ConnectOptions::new(db_uri);
@@ -37,23 +36,5 @@ async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
 
 
 
-pub async fn build_app() -> Result<Router, Box<dyn Error>> {
-    
-    let app = Router::new()
-        .route("/", get(UserCtl::root))
-        .route(
-            "/user",
-            post(UserCtl::save)
-                .put(UserCtl::update_by_id)
-                .delete(UserCtl::remove_by_ids)
-        )
-        .route("/user/delByIds", put(UserCtl::delete_by_ids))
-        .route("/user/list", get(UserCtl::list))
-        .route("/user/page", get(UserCtl::page))
-        .route("/user/:id", get(UserCtl::get_by_id))
-        //.layer(middleware::from_extractor())
-        .with_state(init_status().await?);
-    Ok(app)
-}
 
 
