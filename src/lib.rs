@@ -6,6 +6,7 @@ pub mod svc;
 pub mod util;
 pub mod route;
 
+use dotenvy::dotenv;
 use std::{error::Error, sync::Arc, time::Duration};
 
 use axum::{ http::StatusCode, Json};
@@ -22,6 +23,7 @@ pub struct AppState {
 }
 
 pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
+    dotenv().ok();
     let db_uri = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_s| "mysql://root:root@127.0.0.1:18306/auth_center".to_string());
     let mut opt = ConnectOptions::new(db_uri);

@@ -287,6 +287,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "dotenvy",
  "once_cell",
  "openssl",
  "rand",

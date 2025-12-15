@@ -17,6 +17,7 @@ chrono = "0.4.38"
 anyhow = "1.0.91"
 async-trait = "0.1.77"
 once_cell = "1.21.3"
+dotenvy = "0.15.7"
 
 [package.metadata.cross.target.aarch64-unknown-linux-gnu]
 dockerfile = "./Dockerfile"
