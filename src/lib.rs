@@ -1,3 +1,5 @@
+#[macro_use]
+pub mod macros;
 pub mod ctl;
 pub mod entities;
 pub mod mapper;
