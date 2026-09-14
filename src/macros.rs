@@ -6,7 +6,7 @@ macro_rules! define_mapper_trait {
         #[async_trait::async_trait]
         pub trait $trait_name {
             async fn list(&self, condition: $condition) -> Result<Vec<$vo>, sea_orm::DbErr>;
-            async fn page(&self, condition: $condition) -> Result<crate::util::paged_struct::PageData<$vo>, sea_orm::DbErr>;
+            async fn page(&self, condition: $condition) -> Result<$crate::util::paged_struct::PageData<$vo>, sea_orm::DbErr>;
             async fn get_by_id(&self, rec_id: i64) -> Result<Option<$vo>, sea_orm::DbErr>;
             async fn save(&self, dto: $dto) -> Result<i64, sea_orm::DbErr>;
             async fn update_by_id(&self, dto: $dto) -> Result<u64, sea_orm::DbErr>;
@@ -21,15 +21,15 @@ macro_rules! define_mapper_trait {
 macro_rules! define_mapper_struct {
     ($mapper_name:ident) => {
         pub struct $mapper_name {
-            state: std::sync::Arc<crate::AppState>,
+            state: std::sync::Arc<$crate::AppState>,
         }
 
         impl $mapper_name {
-            pub fn new(state: std::sync::Arc<crate::AppState>) -> Self {
+            pub fn new(state: std::sync::Arc<$crate::AppState>) -> Self {
                 Self { state }
             }
 
-            pub fn get_instance(state: std::sync::Arc<crate::AppState>) -> &'static $mapper_name {
+            pub fn get_instance(state: std::sync::Arc<$crate::AppState>) -> &'static $mapper_name {
                 static INSTANCE: once_cell::sync::OnceCell<$mapper_name> = once_cell::sync::OnceCell::new();
                 INSTANCE.get_or_init(|| $mapper_name::new(state))
             }
@@ -52,23 +52,33 @@ macro_rules! impl_mapper {
     ) => {
         #[async_trait::async_trait]
         impl $mapper_trait for $mapper_name {
+            /// 按条件查询，不分页，返回全部匹配记录。
+            /// condition 里的 page/size 在此不生效。
+            /// 单次最多 MAX_LIST_SIZE 条，超出会报错而不是静默截断，需要更多数据请用 page()。
             async fn list(&self, condition: $condition) -> Result<Vec<$vo>, sea_orm::DbErr> {
-                use sea_orm::{EntityTrait, QueryFilter, QuerySelect, QueryTrait};
-                use crate::util::paged_struct::Pageable;
+                use sea_orm::{EntityTrait, QueryFilter, QuerySelect};
+                use $crate::util::paged_struct::MAX_LIST_SIZE;
 
+                // 多取一行用于探测是否超限，避免额外一次 COUNT
                 let result = $entity::find()
                     .filter(self.build_query_wrapper(&condition))
-                    .apply_if(condition.get_size(), QuerySelect::limit)
-                    .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
+                    .limit(MAX_LIST_SIZE + 1)
                     .into_model::<$vo>()
                     .all(&self.state.mysql_pool)
                     .await?;
+                if result.len() as u64 > MAX_LIST_SIZE {
+                    return Err(sea_orm::DbErr::Custom(format!(
+                        "list 查询结果超过上限 {} 条，请改用分页接口 page",
+                        MAX_LIST_SIZE
+                    )));
+                }
                 Ok(result)
             }
 
-            async fn page(&self, condition: $condition) -> Result<crate::util::paged_struct::PageData<$vo>, sea_orm::DbErr> {
+            /// 分页查询，condition 里的 page/size 生效，缺省为第 1 页、每页 DEFAULT_PAGE_SIZE 条。
+            async fn page(&self, condition: $condition) -> Result<$crate::util::paged_struct::PageData<$vo>, sea_orm::DbErr> {
                 use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait};
-                use crate::util::paged_struct::{PageData, PageInfo, Pageable};
+                use $crate::util::paged_struct::{PageData, PageInfo, Pageable, DEFAULT_PAGE_SIZE};
 
                 let list = $entity::find()
                     .filter(self.build_query_wrapper(&condition))
@@ -83,7 +93,7 @@ macro_rules! impl_mapper {
                     .await?;
                 let page_info = PageInfo::from(
                     condition.get_page().unwrap_or(1),
-                    condition.get_size().unwrap_or(20),
+                    condition.get_size().unwrap_or(DEFAULT_PAGE_SIZE),
                     total,
                 );
                 Ok(PageData::new(page_info, list))
@@ -101,7 +111,7 @@ macro_rules! impl_mapper {
 
             async fn save(&self, dto: $dto) -> Result<i64, sea_orm::DbErr> {
                 use sea_orm::{ActiveModelTrait, EntityTrait};
-                use crate::util::IntoJsonValue;
+                use $crate::util::IntoJsonValue;
                 use tracing::info;
 
                 let dto_json = dto.into_json_with_snake_key();
@@ -115,7 +125,7 @@ macro_rules! impl_mapper {
 
             async fn update_by_id(&self, dto: $dto) -> Result<u64, sea_orm::DbErr> {
                 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
-                use crate::util::IntoJsonValue;
+                use $crate::util::IntoJsonValue;
                 use tracing::info;
 
                 let dto_json = dto.into_json_with_snake_key();
@@ -173,8 +183,8 @@ macro_rules! impl_service {
         use std::sync::Arc;
         use once_cell::sync::OnceCell;
         use sea_orm::DbErr;
-        use crate::util::paged_struct::PageData;
-        use crate::AppState;
+        use $crate::util::paged_struct::PageData;
+        use $crate::AppState;
 
         pub struct $svc_name {
             mapper: &'static $mapper_name,
@@ -239,7 +249,7 @@ macro_rules! impl_controller {
             extract::{Path, Query, State},
             Json,
         };
-        use crate::{
+        use $crate::{
             util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
             AppState, ResultJson,
         };
@@ -322,6 +332,48 @@ macro_rules! impl_controller {
                     .await
                     .map_err(internal_err)?;
                 Ok(Json(RespResult::ok(result)))
+            }
+        }
+    };
+}
+
+// ==================== Pojo 辅助宏 ====================
+
+/// DTO JSON 转换宏
+/// 自动生成 IntoJsonValue 实现：把 camelCase 序列化结果的 key 转成 snake_case，
+/// 供 sea_orm 的 ActiveModel::from_json 直接消费。
+#[macro_export]
+macro_rules! impl_into_json_value {
+    ($dto:ty) => {
+        impl $crate::util::IntoJsonValue for $dto {
+            fn into_json_with_snake_key(&self) -> serde_json::Value {
+                let mut json_object = serde_json::Map::new();
+                let json_value = serde_json::json!(self);
+                if let Some(obj_map) = json_value.as_object() {
+                    for (k, v) in obj_map {
+                        json_object.insert(
+                            $crate::util::common_func::camel_case_to_under_score(k),
+                            v.clone(),
+                        );
+                    }
+                }
+                serde_json::Value::Object(json_object)
+            }
+        }
+    };
+}
+
+/// 分页条件宏
+/// 自动生成 Pageable 实现，要求 Condition 上有 `page: Option<u64>` 与 `size: Option<u64>`。
+#[macro_export]
+macro_rules! impl_pageable {
+    ($condition:ty) => {
+        impl $crate::util::paged_struct::Pageable for $condition {
+            fn get_page(&self) -> Option<u64> {
+                self.page.or(Some(1))
+            }
+            fn get_size(&self) -> Option<u64> {
+                self.size.or(Some($crate::util::paged_struct::DEFAULT_PAGE_SIZE))
             }
         }
     };

@@ -86,6 +86,13 @@ pub mod result_struct {
 pub mod paged_struct {
     use serde::Serialize;
 
+    /// 分页缺省每页条数
+    pub const DEFAULT_PAGE_SIZE: u64 = 20;
+
+    /// list 接口单次返回的硬上限。超过则报错而不是静默截断，
+    /// 需要遍历更多数据请改用分页接口 page。
+    pub const MAX_LIST_SIZE: u64 = 1000;
+
     #[derive(Debug, Serialize, Default)]
     pub struct PageInfo {
         page: u64,
@@ -120,7 +127,7 @@ pub mod paged_struct {
     pub trait Pageable {
         fn get_page(&self) -> Option<u64>;
         fn get_size(&self) -> Option<u64> {
-            Some(20)
+            Some(DEFAULT_PAGE_SIZE)
         }
         fn get_offset(&self) -> Option<u64> {
             let page = match self.get_page() {
@@ -129,7 +136,7 @@ pub mod paged_struct {
             };
             let size = match self.get_size() {
                 Some(size) => size,
-                None => 20,
+                None => DEFAULT_PAGE_SIZE,
             };
             return if page == 1 {
                 Some(0)

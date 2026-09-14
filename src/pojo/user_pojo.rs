@@ -1,11 +1,7 @@
-
 use chrono::NaiveDateTime;
 use sea_orm::{prelude::DateTimeLocal, FromQueryResult};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 
-use crate::util::paged_struct::Pageable;
-use crate::util::{common_func, IntoJsonValue};
 use crate::util::date_format;
 
 #[derive(FromQueryResult, Serialize)]
@@ -58,22 +54,7 @@ pub struct UserCondition {
     pub size: Option<u64>,
 }
 
-impl Pageable for UserCondition {
-    fn get_page(&self) -> Option<u64> {
-        return if let Some(page) = self.page {
-            Some(page)
-        } else {
-            Some(1)
-        };
-    }
-    fn get_size(&self) -> Option<u64> {
-        return if let Some(size) = self.size {
-            Some(size)
-        } else {
-            Some(20)
-        };
-    }
-}
+crate::impl_pageable!(UserCondition);
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
@@ -115,22 +96,4 @@ fn default_resource() -> Option<i8> {
     Some(0_i8)
 }
 
-impl IntoJsonValue for UserDto {
-    /**
-     * 转换 UserDto 对象为 serde_json::Value，对象Key转化为SnakeValue
-     */
-    fn into_json_with_snake_key(&self) -> serde_json::Value {
-        let mut json_object = serde_json::Map::new();
-        let json_value = json!(self);
-        if json_value.is_object() {
-            let obj_map = json_value.as_object().unwrap();
-            for (k, v) in obj_map {
-                json_object.insert(
-                    common_func::camel_case_to_under_score(k.clone().as_str()),
-                    v.clone(),
-                );
-            }
-        }
-        Value::Object(json_object)
-    }
-}
+crate::impl_into_json_value!(UserDto);
