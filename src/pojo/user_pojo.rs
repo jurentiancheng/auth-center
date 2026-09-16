@@ -10,6 +10,8 @@ pub struct UserVo {
     pub id: Option<i64>,
     pub user_name: Option<String>,
     pub real_name: Option<String>,
+    /// 永不序列化：此前 `GET /user/list` 会把密码列直接返回给前端。
+    #[serde(skip_serializing)]
     pub password: Option<String>,
     pub r#type: Option<i8>,
     pub status: Option<i8>,
@@ -67,6 +69,10 @@ pub struct UserDto {
     pub user_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub real_name: Option<String>,
+    /// 明文密码入参。落库前由 `UserSvc` 的 `before_save` / `before_update` 钩子换成 argon2 哈希，
+    /// 所以库里存的不是这里传进来的原文。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
     #[serde(default = "default_resource")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#type: Option<i8>,

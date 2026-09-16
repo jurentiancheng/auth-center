@@ -37,7 +37,9 @@ CREATE TABLE `user` (
     `last_login_time` DATETIME DEFAULT NULL COMMENT '最后登录时间',
     `wechat_open_id` VARCHAR(255) DEFAULT NULL COMMENT '微信OpenID',
     `wechat_union_id` VARCHAR(255) DEFAULT NULL COMMENT '微信UnionID',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    -- 登录按 user_name 查用户。没有唯一约束时，同名用户可以互相登录（认证缺陷而非数据瑕疵）。
+    UNIQUE KEY `uk_user_user_name` (`user_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- 用户信息表

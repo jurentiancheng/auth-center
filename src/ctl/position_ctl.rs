@@ -4,6 +4,7 @@ use crate::svc::position_svc::PositionSvc;
 crate::impl_controller!(
     PositionCtl,
     PositionSvc,
+    position,
     PositionCondition,
     PositionVo,
     PositionDto

@@ -4,6 +4,7 @@ use crate::svc::user_svc::UserSvc;
 crate::impl_controller!(
     UserCtl,
     UserSvc,
+    user,
     UserCondition,
     UserVo,
     UserDto

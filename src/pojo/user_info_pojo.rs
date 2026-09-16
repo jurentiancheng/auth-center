@@ -19,6 +19,8 @@ pub struct UserInfoVo {
     pub portrait: Option<String>,
     pub user_type: Option<String>,
     pub birthday: Option<chrono::NaiveDate>,
+    /// 永不序列化：此前 `GET /userInfo/list` 会把密码列直接返回给前端。
+    #[serde(skip_serializing)]
     pub password: Option<String>,
     pub id_card_type: Option<String>,
     pub id_card_no: Option<String>,

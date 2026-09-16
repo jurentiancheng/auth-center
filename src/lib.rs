@@ -1,44 +1,66 @@
 #[macro_use]
 pub mod macros;
+pub mod auth;
+pub mod config;
 pub mod ctl;
 pub mod entities;
+pub mod hooks;
 pub mod mapper;
 pub mod pojo;
+pub mod route;
 pub mod svc;
 pub mod util;
-pub mod route;
 
-use dotenvy::dotenv;
-use std::{error::Error, sync::Arc, time::Duration};
+use std::{error::Error, sync::Arc};
 
-use axum::{ http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use util::result_struct::RespResult;
 
+use crate::auth::jwt::JwtService;
+use crate::config::AppConfig;
+use crate::mapper::Mappers;
+
 pub type ResultJson<T> = Result<Json<RespResult<T>>, (StatusCode, Json<RespResult<String>>)>;
 
-
-#[derive(Clone)]
+/// 应用状态：进程内共享依赖的装配结果。
+///
+/// 依赖统一从这里注入 —— `mappers` 是各资源的 mapper，`jwt` 是令牌服务。
+/// 不再有 `OnceCell` 静态单例（此前 `get_instance` 是「首个 state 获胜」，
+/// 既换不掉依赖也写不了测试）。
 pub struct AppState {
-    mysql_pool: DatabaseConnection
+    pub config: AppConfig,
+    pub mappers: Mappers,
+    pub jwt: Arc<JwtService>,
+    pool: DatabaseConnection,
+}
+
+impl AppState {
+    pub fn new(config: AppConfig, pool: DatabaseConnection) -> Self {
+        Self {
+            mappers: Mappers::new(pool.clone()),
+            jwt: Arc::new(JwtService::new(&config.jwt_secret, config.jwt_expire_seconds)),
+            config,
+            pool,
+        }
+    }
+
+    /// 连接池。字段保持私有，避免各处绕过 `Mappers` 直接拼 SQL。
+    pub fn pool(&self) -> &DatabaseConnection {
+        &self.pool
+    }
 }
 
 pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
-    dotenv().ok();
-    let db_uri = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_s| "mysql://root:root@127.0.0.1:18306/auth_center".to_string());
-    let mut opt = ConnectOptions::new(db_uri);
-    opt.max_connections(100)
-        .min_connections(5)
-        .connect_timeout(Duration::from_secs(20))
+    let config = AppConfig::from_env()?;
+
+    let mut opt = ConnectOptions::new(config.database_url.clone());
+    opt.max_connections(config.max_connections)
+        .min_connections(config.min_connections)
+        .connect_timeout(config.connect_timeout)
         .sqlx_logging(false);
-    let db: sea_orm::DatabaseConnection = Database::connect(opt).await?;
 
-    Ok(Arc::new(AppState { mysql_pool: db}))
+    let db = Database::connect(opt).await?;
+    Ok(Arc::new(AppState::new(config, db)))
 }
-
-
-
-
-

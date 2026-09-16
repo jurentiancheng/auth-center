@@ -4,6 +4,7 @@ use crate::svc::system_config_svc::SystemConfigSvc;
 crate::impl_controller!(
     SystemConfigCtl,
     SystemConfigSvc,
+    system_config,
     SystemConfigCondition,
     SystemConfigVo,
     SystemConfigDto

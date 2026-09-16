@@ -16,8 +16,18 @@ openssl = { version = "0.10", features = ["vendored"] }
 chrono = "0.4.38"
 anyhow = "1.0.91"
 async-trait = "0.1.77"
-once_cell = "1.21.3"
 dotenvy = "0.15.7"
+jsonwebtoken = { version = "11.0.0", default-features = false, features = ["rust_crypto"] }
+argon2 = "0.6.0"
+
+[dev-dependencies]
+# 集成测试（tests/）是独立 crate，需要自己声明这些才能在假 mapper 的 trait impl
+# 与 Router 驱动里用到。版本与正常依赖一致，cargo 会做 feature 合并，不会重复编译。
+async-trait = "0.1.77"
+axum = "^0.7.5"
+sea-orm = "1.0.1"
+tokio = { version = "1.34.0", features = ["full"] }
+tower = { version = "0.4", features = ["util"] }
 
 [package.metadata.cross.target.aarch64-unknown-linux-gnu]
 dockerfile = "./Dockerfile"

@@ -4,6 +4,7 @@ use crate::svc::permission_svc::PermissionSvc;
 crate::impl_controller!(
     PermissionCtl,
     PermissionSvc,
+    permission,
     PermissionCondition,
     PermissionVo,
     PermissionDto

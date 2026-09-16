@@ -1,7 +1,14 @@
+use crate::auth::{ctl::AuthCtl, middleware::auth_middleware};
 use crate::ctl;
-use axum::{ routing::{get, post, put}, Router};
-use std::error::Error;
 use crate::init_status;
+use crate::AppState;
+use axum::{
+    middleware,
+    routing::{get, post, put},
+    Router,
+};
+use std::error::Error;
+use std::sync::Arc;
 
 use ctl::{
     user_ctl::UserCtl,
@@ -23,11 +30,23 @@ use ctl::{
 };
 
 
-pub async fn build_app_route() -> Result<Router, Box<dyn Error>> {
-    
-    let app = Router::new()
-        // User routes
+/// 同时返回 `AppState`：监听地址等启动参数在配置里，main 不该再硬编码一遍端口。
+pub async fn build_app_route() -> Result<(Router, Arc<AppState>), Box<dyn Error>> {
+    let state = init_status().await?;
+
+    // ---- 白名单：无需令牌 ----
+    // 只放真正必须先于登录存在的东西（根路径探活、登录本身）。
+    let public = Router::new()
         .route("/", get(UserCtl::root))
+        .route("/auth/login", post(AuthCtl::login));
+
+    // ---- 其余全部要求有效令牌 ----
+    // 用 route_layer 而不是 layer：前者只包裹已匹配的路由，
+    // 未知路径仍是 404，不会把 401 变成「该路径是否存在」的探测器。
+    let protected = Router::new()
+        .route("/auth/me", get(AuthCtl::me))
+
+        // User routes
         .route(
             "/user",
             post(UserCtl::save)
@@ -219,6 +238,7 @@ pub async fn build_app_route() -> Result<Router, Box<dyn Error>> {
         .route("/organizationRoleRef/page", get(OrganizationRoleRefCtl::page))
         .route("/organizationRoleRef/:id", get(OrganizationRoleRefCtl::get_by_id))
 
-        .with_state(init_status().await?);
-    Ok(app)
+        .route_layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
+
+    Ok((public.merge(protected).with_state(state.clone()), state))
 }

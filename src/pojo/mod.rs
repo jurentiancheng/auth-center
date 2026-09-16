@@ -1,3 +1,4 @@
+pub mod auth_pojo;
 pub mod department_pojo;
 pub mod department_role_ref_pojo;
 pub mod group_pojo;
@@ -14,6 +15,7 @@ pub mod user_info_pojo;
 pub mod user_role_ref_pojo;
 pub mod user_wechat_info_pojo;
 pub mod user_pojo;
+pub use auth_pojo::*;
 pub use department_pojo::*;
 pub use department_role_ref_pojo::*;
 pub use group_pojo::*;
@@ -29,3 +31,4 @@ pub use user_group_ref_pojo::*;
 pub use user_info_pojo::*;
 pub use user_role_ref_pojo::*;
 pub use user_wechat_info_pojo::*;
+pub use user_pojo::*;

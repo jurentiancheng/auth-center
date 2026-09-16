@@ -48,7 +48,34 @@ pub mod exception {
         )
     }
 
+    /// 401：未认证 / 令牌无效。入参是给客户端看的文案。
+    /// 返回类型本身就是 `IntoResponse`，中间件可以直接 return，无需动 `ResultJson`。
+    pub fn unauthorized_err(msg: &str) -> (StatusCode, Json<RespResult<String>>) {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(RespResult::unauthorized(msg.to_string())),
+        )
+    }
+
 }
+
+#[cfg(test)]
+mod tests {
+    use super::exception::unauthorized_err;
+    use axum::http::StatusCode;
+
+    /// 401 的 HTTP 状态码必须与 body 里的 `code` 一致。
+    /// 否则会出现「HTTP 401 但 body.code 是 500」的自相矛盾响应 —— 客户端无从判断该信哪个。
+    #[test]
+    fn unauthorized_response_is_consistent() {
+        let (status, body) = unauthorized_err("令牌无效");
+
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert_eq!(body.0.code, 401);
+        assert_eq!(body.0.data, "令牌无效");
+    }
+}
+
 
 pub mod result_struct {
     use std::any::Any;
@@ -77,6 +104,16 @@ pub mod result_struct {
             Self {
                 code: 500,
                 message: "系统错误！".to_string(),
+                data: data,
+            }
+        }
+
+        /// 401：未认证或凭证失效。`code` 与 HTTP 状态码保持一致，
+        /// 避免出现「HTTP 401 但 body.code 是 500」这种自相矛盾的响应。
+        pub fn unauthorized(data: T) -> Self {
+            Self {
+                code: 401,
+                message: "未认证".to_string(),
                 data: data,
             }
         }
