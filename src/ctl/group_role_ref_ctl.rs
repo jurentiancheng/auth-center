@@ -32,7 +32,7 @@ impl GroupRoleRefCtl {
         Query(condition): Query<GroupRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<GroupRoleRefVo>> {
-        let group_role_refs = GroupRoleRefSvc::get_instance(&state).list(condition)
+        let group_role_refs = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).list(condition)
             .await
             .map_err(internal_err)?;
     
@@ -51,7 +51,7 @@ impl GroupRoleRefCtl {
         Query(condition): Query<GroupRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<GroupRoleRefVo>> {
-        let group_role_refs = GroupRoleRefSvc::get_instance(&state).page(condition)
+        let group_role_refs = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).page(condition)
             .await
             .map_err(internal_err)?;
     
@@ -70,7 +70,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<i64> {
-        let group_role_ref_id = GroupRoleRefSvc::get_instance(&state).save(group_role_ref_dto)
+        let group_role_ref_id = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).save(group_role_ref_dto)
             .await
             .map_err(internal_err)?;
         Ok(Json(RespResult::ok(group_role_ref_id)))
@@ -88,7 +88,7 @@ impl GroupRoleRefCtl {
         Path(group_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<GroupRoleRefVo>> {
-        let group_role_ref = GroupRoleRefSvc::get_instance(&state).get_by_id(group_role_ref_id)
+        let group_role_ref = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).get_by_id(group_role_ref_id)
             .await
             .map_err(internal_err)?;
     
@@ -107,7 +107,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::get_instance(&state).update_by_id(group_role_ref_dto)
+        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).update_by_id(group_role_ref_dto)
             .await
             .map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
@@ -125,7 +125,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::get_instance(&state).delete_by_ids(group_role_ref_dto)
+        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).delete_by_ids(group_role_ref_dto)
             .await
             .map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
@@ -143,7 +143,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::get_instance(&state).remove_by_ids(group_role_ref_dto)
+        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).remove_by_ids(group_role_ref_dto)
             .await
             .map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))

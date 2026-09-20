@@ -1,21 +1,16 @@
 use std::sync::Arc;
 
-use crate::{mapper::group_mapper::{GroupMapper, GroupMapperTrait}, pojo::group_pojo::*, util::paged_struct::PageData, AppState};
-use once_cell::sync::OnceCell;
+use crate::{ mapper::{ group_mapper::{ GroupMapperTrait}}, pojo::group_pojo::*, util::paged_struct::PageData};
 use sea_orm::DbErr;
 
 pub struct GroupSvc {
-    mapper: &'static GroupMapper,
+    mapper: Arc<dyn GroupMapperTrait>,
 }
 
 impl GroupSvc {
-    pub fn new(state: &AppState) -> Self {
-        Self { mapper: GroupMapper::get_instance(Arc::new(state.clone())) }
-    }
-
-    pub fn get_instance(state: &AppState) -> &'static GroupSvc {
-        static INSTANCE: OnceCell<GroupSvc> = OnceCell::new();
-        INSTANCE.get_or_init(|| GroupSvc::new(state))
+    
+    pub fn new(mapper: Arc<dyn GroupMapperTrait>) -> Self {
+        Self { mapper }
     }
 
     pub async fn list(&self, condition: GroupCondition) -> Result<Vec<GroupVo>, DbErr> {

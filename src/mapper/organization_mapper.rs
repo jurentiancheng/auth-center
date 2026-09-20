@@ -2,22 +2,20 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
+
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::organization_pojo::*, AppState};
+use crate::{pojo::organization_pojo::*};
 use sea_orm::Condition;
 
 /// Trait defining the interface for organization-related database operations
 #[async_trait::async_trait]
-pub trait OrganizationMapperTrait {
+pub trait OrganizationMapperTrait: Send + Sync {
     async fn list(&self, condition: OrganizationCondition) -> Result<Vec<OrganizationVo>, DbErr>;
     async fn page(&self, condition: OrganizationCondition) -> Result<PageData<OrganizationVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<OrganizationVo>, DbErr>;
@@ -29,17 +27,12 @@ pub trait OrganizationMapperTrait {
 
 /// Implementation of OrganizationMapperTrait
 pub struct OrganizationMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl OrganizationMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static OrganizationMapper {
-        static INSTANCE: OnceCell<OrganizationMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| OrganizationMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &OrganizationCondition) -> Condition {
@@ -101,7 +94,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<OrganizationVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(organization)
@@ -113,11 +106,11 @@ impl OrganizationMapperTrait for OrganizationMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<OrganizationVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Organization::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, organization, total).await
     }
@@ -125,7 +118,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<OrganizationVo>, DbErr> {
         let organization_opt = Organization::find_by_id(rec_id)
             .into_model::<OrganizationVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(organization_opt)
     }
@@ -136,7 +129,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
         let mut organization_actmod = organization::ActiveModel::from_json(organization_dtoc)?;
         organization_actmod.set(organization::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         organization_actmod.set(organization::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Organization::insert(organization_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = Organization::insert(organization_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -147,7 +140,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
         let update_result = Organization::update_many()
             .set(organization_actmod)
             .filter(organization::Column::Id.eq(organization_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -157,7 +150,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
         let update_result = Organization::update_many()
             .col_expr(organization::Column::IsDel, Expr::value(-1))
             .filter(organization::Column::Id.is_in(organization_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -166,7 +159,7 @@ impl OrganizationMapperTrait for OrganizationMapper {
         info!("organization_json is {:?}", organization_dto);
         let update_result = Organization::delete_many()
             .filter(organization::Column::Id.is_in(organization_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }

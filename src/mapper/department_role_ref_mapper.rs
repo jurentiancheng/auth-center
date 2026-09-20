@@ -2,14 +2,14 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
 use std::sync::Arc;
 use tracing::info;
 use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
+use crate::mapper;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
 use crate::{pojo::department_role_ref_pojo::*, AppState};
@@ -17,7 +17,7 @@ use sea_orm::Condition;
 
 /// Trait defining the interface for department role ref-related database operations
 #[async_trait::async_trait]
-pub trait DepartmentRoleRefMapperTrait {
+pub trait DepartmentRoleRefMapperTrait: Send + Sync {
     async fn list(&self, condition: DepartmentRoleRefCondition) -> Result<Vec<DepartmentRoleRefVo>, DbErr>;
     async fn page(&self, condition: DepartmentRoleRefCondition) -> Result<PageData<DepartmentRoleRefVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<DepartmentRoleRefVo>, DbErr>;
@@ -29,17 +29,12 @@ pub trait DepartmentRoleRefMapperTrait {
 
 /// Implementation of DepartmentRoleRefMapperTrait
 pub struct DepartmentRoleRefMapper {
-    state: Arc<AppState>,
+    db_conn: DatabaseConnection,
 }
 
 impl DepartmentRoleRefMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static DepartmentRoleRefMapper {
-        static INSTANCE: OnceCell<DepartmentRoleRefMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| DepartmentRoleRefMapper::new(state))
+    pub fn new(db_conn: DatabaseConnection) -> Self {
+        Self { db_conn }
     }
 
     fn build_query_wrapper(&self, condition: &DepartmentRoleRefCondition) -> Condition {
@@ -83,7 +78,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<DepartmentRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db_conn)
             .await?;
 
         Ok(department_role_ref)
@@ -95,11 +90,11 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<DepartmentRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db_conn)
             .await?;
         let total = DepartmentRoleRef::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db_conn)
             .await?;
         self.convert_page_data(&condition, department_role_ref, total).await
     }
@@ -107,7 +102,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<DepartmentRoleRefVo>, DbErr> {
         let department_role_ref_opt = DepartmentRoleRef::find_by_id(rec_id)
             .into_model::<DepartmentRoleRefVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db_conn)
             .await?;
         Ok(department_role_ref_opt)
     }
@@ -118,7 +113,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
         let mut department_role_ref_actmod = department_role_ref::ActiveModel::from_json(department_role_ref_dtoc)?;
         department_role_ref_actmod.set(department_role_ref::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         department_role_ref_actmod.set(department_role_ref::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = DepartmentRoleRef::insert(department_role_ref_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = DepartmentRoleRef::insert(department_role_ref_actmod).exec(&self.db_conn).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -129,7 +124,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
         let update_result = DepartmentRoleRef::update_many()
             .set(department_role_ref_actmod)
             .filter(department_role_ref::Column::Id.eq(department_role_ref_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db_conn)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -139,7 +134,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
         let update_result = DepartmentRoleRef::update_many()
             .col_expr(department_role_ref::Column::IsDel, Expr::value(-1))
             .filter(department_role_ref::Column::Id.is_in(department_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db_conn)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -148,7 +143,7 @@ impl DepartmentRoleRefMapperTrait for DepartmentRoleRefMapper {
         info!("department_role_ref_json is {:?}", department_role_ref_dto);
         let update_result = DepartmentRoleRef::delete_many()
             .filter(department_role_ref::Column::Id.is_in(department_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db_conn)
             .await?;
         Ok(update_result.rows_affected)
     }

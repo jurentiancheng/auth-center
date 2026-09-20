@@ -2,22 +2,19 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::organization_role_ref_pojo::*, AppState};
+use crate::{pojo::organization_role_ref_pojo::*};
 use sea_orm::Condition;
 
 /// Trait defining the interface for organization role ref-related database operations
 #[async_trait::async_trait]
-pub trait OrganizationRoleRefMapperTrait {
+pub trait OrganizationRoleRefMapperTrait: Send + Sync {
     async fn list(&self, condition: OrganizationRoleRefCondition) -> Result<Vec<OrganizationRoleRefVo>, DbErr>;
     async fn page(&self, condition: OrganizationRoleRefCondition) -> Result<PageData<OrganizationRoleRefVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<OrganizationRoleRefVo>, DbErr>;
@@ -29,17 +26,12 @@ pub trait OrganizationRoleRefMapperTrait {
 
 /// Implementation of OrganizationRoleRefMapperTrait
 pub struct OrganizationRoleRefMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl OrganizationRoleRefMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static OrganizationRoleRefMapper {
-        static INSTANCE: OnceCell<OrganizationRoleRefMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| OrganizationRoleRefMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &OrganizationRoleRefCondition) -> Condition {
@@ -80,7 +72,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<OrganizationRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(organization_role_ref)
@@ -92,11 +84,11 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<OrganizationRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = OrganizationRoleRef::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, organization_role_ref, total).await
     }
@@ -104,7 +96,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<OrganizationRoleRefVo>, DbErr> {
         let organization_role_ref_opt = OrganizationRoleRef::find_by_id(rec_id)
             .into_model::<OrganizationRoleRefVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(organization_role_ref_opt)
     }
@@ -115,7 +107,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
         let mut organization_role_ref_actmod = organization_role_ref::ActiveModel::from_json(organization_role_ref_dtoc)?;
         organization_role_ref_actmod.set(organization_role_ref::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         organization_role_ref_actmod.set(organization_role_ref::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = OrganizationRoleRef::insert(organization_role_ref_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = OrganizationRoleRef::insert(organization_role_ref_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -126,7 +118,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
         let update_result = OrganizationRoleRef::update_many()
             .set(organization_role_ref_actmod)
             .filter(organization_role_ref::Column::Id.eq(organization_role_ref_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -136,7 +128,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
         let update_result = OrganizationRoleRef::update_many()
             .col_expr(organization_role_ref::Column::IsDel, Expr::value(-1))
             .filter(organization_role_ref::Column::Id.is_in(organization_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -145,7 +137,7 @@ impl OrganizationRoleRefMapperTrait for OrganizationRoleRefMapper {
         info!("organization_role_ref_json is {:?}", organization_role_ref_dto);
         let update_result = OrganizationRoleRef::delete_many()
             .filter(organization_role_ref::Column::Id.is_in(organization_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }

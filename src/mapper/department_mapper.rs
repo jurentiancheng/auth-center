@@ -2,8 +2,7 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
 use std::sync::Arc;
 use tracing::info;
@@ -17,7 +16,7 @@ use sea_orm::Condition;
 
 /// Trait defining the interface for department-related database operations
 #[async_trait::async_trait]
-pub trait DepartmentMapperTrait {
+pub trait DepartmentMapperTrait: Send + Sync {
     async fn list(&self, condition: DepartmentCondition) -> Result<Vec<DepartmentVo>, DbErr>;
     async fn page(&self, condition: DepartmentCondition) -> Result<PageData<DepartmentVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<DepartmentVo>, DbErr>;
@@ -29,17 +28,12 @@ pub trait DepartmentMapperTrait {
 
 /// Implementation of DepartmentMapperTrait
 pub struct DepartmentMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl DepartmentMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static DepartmentMapper {
-        static INSTANCE: OnceCell<DepartmentMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| DepartmentMapper::new(state))
+    pub fn new(db_conn: DatabaseConnection) -> Self {
+        Self { db: db_conn }
     }
 
     fn build_query_wrapper(&self, condition: &DepartmentCondition) -> Condition {
@@ -86,7 +80,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<DepartmentVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(department)
@@ -98,11 +92,11 @@ impl DepartmentMapperTrait for DepartmentMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<DepartmentVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Department::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, department, total).await
     }
@@ -110,7 +104,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<DepartmentVo>, DbErr> {
         let department_opt = Department::find_by_id(rec_id)
             .into_model::<DepartmentVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(department_opt)
     }
@@ -121,7 +115,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
         let mut department_actmod = department::ActiveModel::from_json(department_dtoc)?;
         department_actmod.set(department::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         department_actmod.set(department::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Department::insert(department_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = Department::insert(department_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -132,7 +126,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
         let update_result = Department::update_many()
             .set(department_actmod)
             .filter(department::Column::Id.eq(department_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -142,7 +136,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
         let update_result = Department::update_many()
             .col_expr(department::Column::IsDel, Expr::value(-1))
             .filter(department::Column::Id.is_in(department_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -151,7 +145,7 @@ impl DepartmentMapperTrait for DepartmentMapper {
         info!("department_json is {:?}", department_dto);
         let update_result = Department::delete_many()
             .filter(department::Column::Id.is_in(department_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }

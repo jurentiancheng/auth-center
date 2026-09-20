@@ -1,21 +1,15 @@
 use std::sync::Arc;
 
-use crate::{mapper::organization_mapper::{OrganizationMapper, OrganizationMapperTrait}, pojo::organization_pojo::*, util::paged_struct::PageData, AppState};
-use once_cell::sync::OnceCell;
+use crate::{mapper::organization_mapper::{OrganizationMapperTrait}, pojo::organization_pojo::*, util::paged_struct::PageData, AppState};
 use sea_orm::DbErr;
 
 pub struct OrganizationSvc {
-    mapper: &'static OrganizationMapper,
+    mapper: Arc<dyn OrganizationMapperTrait>,
 }
 
 impl OrganizationSvc {
-    pub fn new(state: &AppState) -> Self {
-        Self { mapper: OrganizationMapper::get_instance(Arc::new(state.clone())) }
-    }
-
-    pub fn get_instance(state: &AppState) -> &'static OrganizationSvc {
-        static INSTANCE: OnceCell<OrganizationSvc> = OnceCell::new();
-        INSTANCE.get_or_init(|| OrganizationSvc::new(state))
+    pub fn new(mapper: Arc<dyn OrganizationMapperTrait>) -> Self {
+        Self { mapper }
     }
 
     pub async fn list(&self, condition: OrganizationCondition) -> Result<Vec<OrganizationVo>, DbErr> {

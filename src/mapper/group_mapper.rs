@@ -2,22 +2,19 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::group_pojo::*, AppState};
+use crate::{pojo::group_pojo::*};
 use sea_orm::Condition;
 
 /// Trait defining the interface for group-related database operations
 #[async_trait::async_trait]
-pub trait GroupMapperTrait {
+pub trait GroupMapperTrait: Send + Sync {
     async fn list(&self, condition: GroupCondition) -> Result<Vec<GroupVo>, DbErr>;
     async fn page(&self, condition: GroupCondition) -> Result<PageData<GroupVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<GroupVo>, DbErr>;
@@ -29,17 +26,12 @@ pub trait GroupMapperTrait {
 
 /// Implementation of GroupMapperTrait
 pub struct GroupMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl GroupMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static GroupMapper {
-        static INSTANCE: OnceCell<GroupMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| GroupMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &GroupCondition) -> Condition {
@@ -83,7 +75,7 @@ impl GroupMapperTrait for GroupMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<GroupVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(group)
@@ -95,11 +87,11 @@ impl GroupMapperTrait for GroupMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<GroupVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Group::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, group, total).await
     }
@@ -107,7 +99,7 @@ impl GroupMapperTrait for GroupMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<GroupVo>, DbErr> {
         let group_opt = Group::find_by_id(rec_id)
             .into_model::<GroupVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(group_opt)
     }
@@ -118,7 +110,7 @@ impl GroupMapperTrait for GroupMapper {
         let mut group_actmod = group::ActiveModel::from_json(group_dtoc)?;
         group_actmod.set(group::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         group_actmod.set(group::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Group::insert(group_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = Group::insert(group_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -129,7 +121,7 @@ impl GroupMapperTrait for GroupMapper {
         let update_result = Group::update_many()
             .set(group_actmod)
             .filter(group::Column::Id.eq(group_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -139,7 +131,7 @@ impl GroupMapperTrait for GroupMapper {
         let update_result = Group::update_many()
             .col_expr(group::Column::IsDel, Expr::value(-1))
             .filter(group::Column::Id.is_in(group_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -148,7 +140,7 @@ impl GroupMapperTrait for GroupMapper {
         info!("group_json is {:?}", group_dto);
         let update_result = Group::delete_many()
             .filter(group::Column::Id.is_in(group_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }

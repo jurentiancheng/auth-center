@@ -14,12 +14,19 @@ use axum::{ http::StatusCode, Json};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use util::result_struct::RespResult;
 
-pub type ResultJson<T> = Result<Json<RespResult<T>>, (StatusCode, Json<RespResult<String>>)>;
+use crate::mapper::Mappers;
 
+pub type ResultJson<T> = Result<Json<RespResult<T>>, (StatusCode, Json<RespResult<String>>)>;
 
 #[derive(Clone)]
 pub struct AppState {
+    mappers: Mappers,
     mysql_pool: DatabaseConnection
+}
+impl AppState {
+    pub fn new(mappers: Mappers, mysql_pool: DatabaseConnection) -> Self {
+        Self {mappers: mappers, mysql_pool: mysql_pool}
+    }
 }
 
 pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
@@ -33,7 +40,7 @@ pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
         .sqlx_logging(false);
     let db: sea_orm::DatabaseConnection = Database::connect(opt).await?;
 
-    Ok(Arc::new(AppState { mysql_pool: db}))
+    Ok(Arc::new(AppState::new(Mappers::new(db.clone()), db)))
 }
 
 

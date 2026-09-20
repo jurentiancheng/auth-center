@@ -2,22 +2,19 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
-use tracing::info;
-use once_cell::sync::OnceCell;
 
+use tracing::info;
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::group_role_ref_pojo::*, AppState};
+use crate::{pojo::group_role_ref_pojo::*};
 use sea_orm::Condition;
 
 /// Trait defining the interface for group role ref-related database operations
 #[async_trait::async_trait]
-pub trait GroupRoleRefMapperTrait {
+pub trait GroupRoleRefMapperTrait: Send + Sync {
     async fn list(&self, condition: GroupRoleRefCondition) -> Result<Vec<GroupRoleRefVo>, DbErr>;
     async fn page(&self, condition: GroupRoleRefCondition) -> Result<PageData<GroupRoleRefVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<GroupRoleRefVo>, DbErr>;
@@ -29,17 +26,12 @@ pub trait GroupRoleRefMapperTrait {
 
 /// Implementation of GroupRoleRefMapperTrait
 pub struct GroupRoleRefMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl GroupRoleRefMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static GroupRoleRefMapper {
-        static INSTANCE: OnceCell<GroupRoleRefMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| GroupRoleRefMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &GroupRoleRefCondition) -> Condition {
@@ -83,7 +75,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<GroupRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(group_role_ref)
@@ -95,11 +87,11 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<GroupRoleRefVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = GroupRoleRef::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, group_role_ref, total).await
     }
@@ -107,7 +99,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<GroupRoleRefVo>, DbErr> {
         let group_role_ref_opt = GroupRoleRef::find_by_id(rec_id)
             .into_model::<GroupRoleRefVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(group_role_ref_opt)
     }
@@ -118,7 +110,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
         let mut group_role_ref_actmod = group_role_ref::ActiveModel::from_json(group_role_ref_dtoc)?;
         group_role_ref_actmod.set(group_role_ref::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         group_role_ref_actmod.set(group_role_ref::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = GroupRoleRef::insert(group_role_ref_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = GroupRoleRef::insert(group_role_ref_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -129,7 +121,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
         let update_result = GroupRoleRef::update_many()
             .set(group_role_ref_actmod)
             .filter(group_role_ref::Column::Id.eq(group_role_ref_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -139,7 +131,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
         let update_result = GroupRoleRef::update_many()
             .col_expr(group_role_ref::Column::IsDel, Expr::value(-1))
             .filter(group_role_ref::Column::Id.is_in(group_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -148,7 +140,7 @@ impl GroupRoleRefMapperTrait for GroupRoleRefMapper {
         info!("group_role_ref_json is {:?}", group_role_ref_dto);
         let update_result = GroupRoleRef::delete_many()
             .filter(group_role_ref::Column::Id.is_in(group_role_ref_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
