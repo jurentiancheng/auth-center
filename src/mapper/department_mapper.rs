@@ -4,14 +4,11 @@ use sea_orm::sea_query::Cond;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
-
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::department_pojo::*, AppState};
+use crate::{pojo::department_pojo::*};
 use sea_orm::Condition;
 
 /// Trait defining the interface for department-related database operations
