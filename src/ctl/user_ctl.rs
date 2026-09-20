@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::user_pojo::*,
-    svc::user_svc::UserSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl UserCtl {
         Query(condition): Query<UserCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<UserVo>> {
-        let users = UserSvc::new(state.mappers.user.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let users = state.svcs.user.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(users)))
     }
@@ -52,10 +48,7 @@ impl UserCtl {
         Query(condition): Query<UserCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<UserVo>> {
-        let users = UserSvc::new(state.mappers.user.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let users = state.svcs.user.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(users)))
     }
@@ -72,10 +65,7 @@ impl UserCtl {
         State(state): State<Arc<AppState>>,
         Json(user_dto): Json<UserDto>,
     ) -> ResultJson<i64> {
-        let user_id = UserSvc::new(state.mappers.user.clone())
-            .save(user_dto)
-            .await
-            .map_err(internal_err)?;
+        let user_id = state.svcs.user.save(user_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(user_id)))
     }
 
@@ -91,10 +81,7 @@ impl UserCtl {
         Path(user_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<UserVo>> {
-        let users = UserSvc::new(state.mappers.user.clone())
-            .get_by_id(user_id)
-            .await
-            .map_err(internal_err)?;
+        let users = state.svcs.user.get_by_id(user_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(users)))
     }
@@ -111,10 +98,7 @@ impl UserCtl {
         State(state): State<Arc<AppState>>,
         Json(user_dto): Json<UserDto>,
     ) -> ResultJson<u64> {
-        let result = UserSvc::new(state.mappers.user.clone())
-            .update_by_id(user_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user.update_by_id(user_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl UserCtl {
         State(state): State<Arc<AppState>>,
         Json(user_dto): Json<UserDto>,
     ) -> ResultJson<u64> {
-        let result = UserSvc::new(state.mappers.user.clone())
-            .delete_by_ids(user_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user.delete_by_ids(user_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl UserCtl {
         State(state): State<Arc<AppState>>,
         Json(user_dto): Json<UserDto>,
     ) -> ResultJson<u64> {
-        let result = UserSvc::new(state.mappers.user.clone())
-            .remove_by_ids(user_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user.remove_by_ids(user_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

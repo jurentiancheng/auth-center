@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::user_group_ref_pojo::*,
-    svc::user_group_ref_svc::UserGroupRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl UserGroupRefCtl {
         Query(condition): Query<UserGroupRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<UserGroupRefVo>> {
-        let user_group_refs = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_group_refs = state.svcs.user_group_ref.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_group_refs)))
     }
@@ -52,10 +48,7 @@ impl UserGroupRefCtl {
         Query(condition): Query<UserGroupRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<UserGroupRefVo>> {
-        let user_group_refs = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_group_refs = state.svcs.user_group_ref.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_group_refs)))
     }
@@ -72,10 +65,7 @@ impl UserGroupRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_group_ref_dto): Json<UserGroupRefDto>,
     ) -> ResultJson<i64> {
-        let user_group_ref_id = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .save(user_group_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let user_group_ref_id = state.svcs.user_group_ref.save(user_group_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(user_group_ref_id)))
     }
 
@@ -91,10 +81,7 @@ impl UserGroupRefCtl {
         Path(user_group_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<UserGroupRefVo>> {
-        let user_group_ref = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .get_by_id(user_group_ref_id)
-            .await
-            .map_err(internal_err)?;
+        let user_group_ref = state.svcs.user_group_ref.get_by_id(user_group_ref_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_group_ref)))
     }
@@ -111,10 +98,7 @@ impl UserGroupRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_group_ref_dto): Json<UserGroupRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .update_by_id(user_group_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_group_ref.update_by_id(user_group_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl UserGroupRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_group_ref_dto): Json<UserGroupRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .delete_by_ids(user_group_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_group_ref.delete_by_ids(user_group_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl UserGroupRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_group_ref_dto): Json<UserGroupRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserGroupRefSvc::new(state.mappers.user_group_ref.clone())
-            .remove_by_ids(user_group_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_group_ref.remove_by_ids(user_group_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

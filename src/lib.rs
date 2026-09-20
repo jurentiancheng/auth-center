@@ -2,30 +2,30 @@ pub mod ctl;
 pub mod entities;
 pub mod mapper;
 pub mod pojo;
+pub mod route;
 pub mod svc;
 pub mod util;
-pub mod route;
 
 use dotenvy::dotenv;
 use std::{error::Error, sync::Arc, time::Duration};
 
-use axum::{ http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database};
 use util::result_struct::RespResult;
 
 use crate::mapper::Mappers;
+use crate::svc::Svcs;
 
 pub type ResultJson<T> = Result<Json<RespResult<T>>, (StatusCode, Json<RespResult<String>>)>;
 
 #[derive(Clone)]
 pub struct AppState {
-    mappers: Mappers,
-    mysql_pool: DatabaseConnection
+    svcs: Svcs,
 }
 impl AppState {
-    pub fn new(mappers: Mappers, mysql_pool: DatabaseConnection) -> Self {
-        Self {mappers: mappers, mysql_pool: mysql_pool}
+    pub fn new(svcs: Svcs) -> Self {
+        Self { svcs }
     }
 }
 
@@ -40,10 +40,5 @@ pub async fn init_status() -> Result<Arc<AppState>, Box<dyn Error>> {
         .sqlx_logging(false);
     let db: sea_orm::DatabaseConnection = Database::connect(opt).await?;
 
-    Ok(Arc::new(AppState::new(Mappers::new(db.clone()), db)))
+    Ok(Arc::new(AppState::new(Svcs::new(&Mappers::new(db)))))
 }
-
-
-
-
-

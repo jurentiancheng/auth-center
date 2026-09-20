@@ -1,15 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        system_config_mapper::{SystemConfigMapper, SystemConfigMapperTrait},
-    },
+    mapper::SystemConfigMapperTrait,
     pojo::system_config_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct SystemConfigSvc {

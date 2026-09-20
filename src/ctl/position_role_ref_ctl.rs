@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::position_role_ref_pojo::*,
-    svc::position_role_ref_svc::PositionRoleRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl PositionRoleRefCtl {
         Query(condition): Query<PositionRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<PositionRoleRefVo>> {
-        let position_role_refs = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let position_role_refs = state.svcs.position_role_ref.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(position_role_refs)))
     }
@@ -52,10 +48,7 @@ impl PositionRoleRefCtl {
         Query(condition): Query<PositionRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<PositionRoleRefVo>> {
-        let position_role_refs = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let position_role_refs = state.svcs.position_role_ref.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(position_role_refs)))
     }
@@ -72,10 +65,7 @@ impl PositionRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(position_role_ref_dto): Json<PositionRoleRefDto>,
     ) -> ResultJson<i64> {
-        let position_role_ref_id = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .save(position_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let position_role_ref_id = state.svcs.position_role_ref.save(position_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(position_role_ref_id)))
     }
 
@@ -91,10 +81,7 @@ impl PositionRoleRefCtl {
         Path(position_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<PositionRoleRefVo>> {
-        let position_role_ref = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .get_by_id(position_role_ref_id)
-            .await
-            .map_err(internal_err)?;
+        let position_role_ref = state.svcs.position_role_ref.get_by_id(position_role_ref_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(position_role_ref)))
     }
@@ -111,10 +98,7 @@ impl PositionRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(position_role_ref_dto): Json<PositionRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .update_by_id(position_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position_role_ref.update_by_id(position_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl PositionRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(position_role_ref_dto): Json<PositionRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .delete_by_ids(position_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position_role_ref.delete_by_ids(position_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl PositionRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(position_role_ref_dto): Json<PositionRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = PositionRoleRefSvc::new(state.mappers.position_role_ref.clone())
-            .remove_by_ids(position_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position_role_ref.remove_by_ids(position_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

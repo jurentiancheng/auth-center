@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::{ mapper::{ group_mapper::{ GroupMapperTrait}}, pojo::group_pojo::*, util::paged_struct::PageData};
+use crate::{
+    mapper::GroupMapperTrait,
+    pojo::group_pojo::*,
+    util::paged_struct::PageData,
+};
 use sea_orm::DbErr;
 
 pub struct GroupSvc {

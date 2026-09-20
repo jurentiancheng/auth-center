@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::organization_role_ref_pojo::*,
-    svc::organization_role_ref_svc::OrganizationRoleRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl OrganizationRoleRefCtl {
         Query(condition): Query<OrganizationRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<OrganizationRoleRefVo>> {
-        let organization_role_refs = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let organization_role_refs = state.svcs.organization_role_ref.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organization_role_refs)))
     }
@@ -52,10 +48,7 @@ impl OrganizationRoleRefCtl {
         Query(condition): Query<OrganizationRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<OrganizationRoleRefVo>> {
-        let organization_role_refs = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let organization_role_refs = state.svcs.organization_role_ref.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organization_role_refs)))
     }
@@ -72,10 +65,7 @@ impl OrganizationRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_role_ref_dto): Json<OrganizationRoleRefDto>,
     ) -> ResultJson<i64> {
-        let organization_role_ref_id = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .save(organization_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let organization_role_ref_id = state.svcs.organization_role_ref.save(organization_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(organization_role_ref_id)))
     }
 
@@ -91,10 +81,7 @@ impl OrganizationRoleRefCtl {
         Path(organization_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<OrganizationRoleRefVo>> {
-        let organization_role_ref = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .get_by_id(organization_role_ref_id)
-            .await
-            .map_err(internal_err)?;
+        let organization_role_ref = state.svcs.organization_role_ref.get_by_id(organization_role_ref_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organization_role_ref)))
     }
@@ -111,10 +98,7 @@ impl OrganizationRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_role_ref_dto): Json<OrganizationRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .update_by_id(organization_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization_role_ref.update_by_id(organization_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl OrganizationRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_role_ref_dto): Json<OrganizationRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .delete_by_ids(organization_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization_role_ref.delete_by_ids(organization_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl OrganizationRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_role_ref_dto): Json<OrganizationRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationRoleRefSvc::new(state.mappers.organization_role_ref.clone())
-            .remove_by_ids(organization_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization_role_ref.remove_by_ids(organization_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

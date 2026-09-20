@@ -1,15 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        permission_mapper::{PermissionMapper, PermissionMapperTrait},
-    },
+    mapper::PermissionMapperTrait,
     pojo::permission_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct PermissionSvc {

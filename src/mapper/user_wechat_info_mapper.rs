@@ -1,5 +1,4 @@
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
@@ -11,7 +10,7 @@ use tracing::info;
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::user_wechat_info_pojo::*, AppState};
+use crate::pojo::user_wechat_info_pojo::*;
 use sea_orm::Condition;
 /// Trait defining the interface for user wechat info-related database operations
 #[async_trait::async_trait]

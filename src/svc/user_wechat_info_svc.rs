@@ -1,15 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        user_wechat_info_mapper::{UserWechatInfoMapper, UserWechatInfoMapperTrait},
-    },
+    mapper::UserWechatInfoMapperTrait,
     pojo::user_wechat_info_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct UserWechatInfoSvc {

@@ -1,16 +1,10 @@
-use core::sync;
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        user_group_ref_mapper::{UserGroupRefMapper, UserGroupRefMapperTrait},
-    },
+    mapper::UserGroupRefMapperTrait,
     pojo::user_group_ref_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct UserGroupRefSvc {

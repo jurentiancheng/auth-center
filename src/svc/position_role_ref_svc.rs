@@ -1,15 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        position_role_ref_mapper::{PositionRoleRefMapper, PositionRoleRefMapperTrait},
-    },
+    mapper::PositionRoleRefMapperTrait,
     pojo::position_role_ref_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct PositionRoleRefSvc {

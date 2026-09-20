@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::position_pojo::*,
-    svc::position_svc::PositionSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl PositionCtl {
         Query(condition): Query<PositionCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<PositionVo>> {
-        let positions = PositionSvc::new(state.mappers.position.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let positions = state.svcs.position.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(positions)))
     }
@@ -52,10 +48,7 @@ impl PositionCtl {
         Query(condition): Query<PositionCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<PositionVo>> {
-        let positions = PositionSvc::new(state.mappers.position.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let positions = state.svcs.position.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(positions)))
     }
@@ -72,10 +65,7 @@ impl PositionCtl {
         State(state): State<Arc<AppState>>,
         Json(position_dto): Json<PositionDto>,
     ) -> ResultJson<i64> {
-        let position_id = PositionSvc::new(state.mappers.position.clone())
-            .save(position_dto)
-            .await
-            .map_err(internal_err)?;
+        let position_id = state.svcs.position.save(position_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(position_id)))
     }
 
@@ -91,10 +81,7 @@ impl PositionCtl {
         Path(position_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<PositionVo>> {
-        let position = PositionSvc::new(state.mappers.position.clone())
-            .get_by_id(position_id)
-            .await
-            .map_err(internal_err)?;
+        let position = state.svcs.position.get_by_id(position_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(position)))
     }
@@ -111,10 +98,7 @@ impl PositionCtl {
         State(state): State<Arc<AppState>>,
         Json(position_dto): Json<PositionDto>,
     ) -> ResultJson<u64> {
-        let result = PositionSvc::new(state.mappers.position.clone())
-            .update_by_id(position_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position.update_by_id(position_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl PositionCtl {
         State(state): State<Arc<AppState>>,
         Json(position_dto): Json<PositionDto>,
     ) -> ResultJson<u64> {
-        let result = PositionSvc::new(state.mappers.position.clone())
-            .delete_by_ids(position_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position.delete_by_ids(position_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl PositionCtl {
         State(state): State<Arc<AppState>>,
         Json(position_dto): Json<PositionDto>,
     ) -> ResultJson<u64> {
-        let result = PositionSvc::new(state.mappers.position.clone())
-            .remove_by_ids(position_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.position.remove_by_ids(position_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

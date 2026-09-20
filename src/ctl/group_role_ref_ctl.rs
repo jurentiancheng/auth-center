@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::group_role_ref_pojo::*,
-    svc::group_role_ref_svc::GroupRoleRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,9 +31,7 @@ impl GroupRoleRefCtl {
         Query(condition): Query<GroupRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<GroupRoleRefVo>> {
-        let group_role_refs = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).list(condition)
-            .await
-            .map_err(internal_err)?;
+        let group_role_refs = state.svcs.group_role_ref.list(condition).await.map_err(internal_err)?;
     
         Ok(Json(RespResult::ok(group_role_refs)))
     }
@@ -51,9 +48,7 @@ impl GroupRoleRefCtl {
         Query(condition): Query<GroupRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<GroupRoleRefVo>> {
-        let group_role_refs = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).page(condition)
-            .await
-            .map_err(internal_err)?;
+        let group_role_refs = state.svcs.group_role_ref.page(condition).await.map_err(internal_err)?;
     
         Ok(Json(RespResult::ok(group_role_refs)))
     }
@@ -70,9 +65,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<i64> {
-        let group_role_ref_id = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).save(group_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let group_role_ref_id = state.svcs.group_role_ref.save(group_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(group_role_ref_id)))
     }
     
@@ -88,9 +81,7 @@ impl GroupRoleRefCtl {
         Path(group_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<GroupRoleRefVo>> {
-        let group_role_ref = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).get_by_id(group_role_ref_id)
-            .await
-            .map_err(internal_err)?;
+        let group_role_ref = state.svcs.group_role_ref.get_by_id(group_role_ref_id).await.map_err(internal_err)?;
     
         Ok(Json(RespResult::ok(group_role_ref)))
     }
@@ -107,9 +98,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).update_by_id(group_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group_role_ref.update_by_id(group_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
     
@@ -125,9 +114,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).delete_by_ids(group_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group_role_ref.delete_by_ids(group_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
     
@@ -143,9 +130,7 @@ impl GroupRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(group_role_ref_dto): Json<GroupRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = GroupRoleRefSvc::new(state.mappers.group_role_ref.clone()).remove_by_ids(group_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group_role_ref.remove_by_ids(group_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 } 

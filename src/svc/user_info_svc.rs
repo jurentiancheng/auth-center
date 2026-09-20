@@ -1,15 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    mapper::{
-        self,
-        user_info_mapper::{UserInfoMapper, UserInfoMapperTrait},
-    },
+    mapper::UserInfoMapperTrait,
     pojo::user_info_pojo::*,
     util::paged_struct::PageData,
-    AppState,
 };
-use once_cell::sync::OnceCell;
 use sea_orm::DbErr;
 
 pub struct UserInfoSvc {

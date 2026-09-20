@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::department_role_ref_pojo::*,
-    svc::department_role_ref_svc::DepartmentRoleRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,11 +31,7 @@ impl DepartmentRoleRefCtl {
         Query(condition): Query<DepartmentRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<DepartmentRoleRefVo>> {
-        let department_role_refs =
-            DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-                .list(condition)
-                .await
-                .map_err(internal_err)?;
+        let department_role_refs = state.svcs.department_role_ref.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(department_role_refs)))
     }
@@ -53,11 +48,7 @@ impl DepartmentRoleRefCtl {
         Query(condition): Query<DepartmentRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<DepartmentRoleRefVo>> {
-        let department_role_refs =
-            DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-                .page(condition)
-                .await
-                .map_err(internal_err)?;
+        let department_role_refs = state.svcs.department_role_ref.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(department_role_refs)))
     }
@@ -74,11 +65,7 @@ impl DepartmentRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(department_role_ref_dto): Json<DepartmentRoleRefDto>,
     ) -> ResultJson<i64> {
-        let department_role_ref_id =
-            DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-                .save(department_role_ref_dto)
-                .await
-                .map_err(internal_err)?;
+        let department_role_ref_id = state.svcs.department_role_ref.save(department_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(department_role_ref_id)))
     }
 
@@ -94,11 +81,7 @@ impl DepartmentRoleRefCtl {
         Path(department_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<DepartmentRoleRefVo>> {
-        let department_role_ref =
-            DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-                .get_by_id(department_role_ref_id)
-                .await
-                .map_err(internal_err)?;
+        let department_role_ref = state.svcs.department_role_ref.get_by_id(department_role_ref_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(department_role_ref)))
     }
@@ -115,10 +98,7 @@ impl DepartmentRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(department_role_ref_dto): Json<DepartmentRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-            .update_by_id(department_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department_role_ref.update_by_id(department_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -134,10 +114,7 @@ impl DepartmentRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(department_role_ref_dto): Json<DepartmentRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-            .delete_by_ids(department_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department_role_ref.delete_by_ids(department_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -153,10 +130,7 @@ impl DepartmentRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(department_role_ref_dto): Json<DepartmentRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentRoleRefSvc::new(state.mappers.department_role_ref_mapper.clone())
-            .remove_by_ids(department_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department_role_ref.remove_by_ids(department_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

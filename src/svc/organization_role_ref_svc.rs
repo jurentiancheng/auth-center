@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::{ mapper::{organization_role_ref_mapper::{ OrganizationRoleRefMapperTrait}}, pojo::organization_role_ref_pojo::*, util::paged_struct::PageData};
+use crate::{
+    mapper::OrganizationRoleRefMapperTrait,
+    pojo::organization_role_ref_pojo::*,
+    util::paged_struct::PageData,
+};
 use sea_orm::DbErr;
 
 pub struct OrganizationRoleRefSvc {

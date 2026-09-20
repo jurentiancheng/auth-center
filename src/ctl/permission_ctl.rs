@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::permission_pojo::*,
-    svc::permission_svc::PermissionSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl PermissionCtl {
         Query(condition): Query<PermissionCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<PermissionVo>> {
-        let permissions = PermissionSvc::new(state.mappers.permission.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let permissions = state.svcs.permission.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(permissions)))
     }
@@ -52,10 +48,7 @@ impl PermissionCtl {
         Query(condition): Query<PermissionCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<PermissionVo>> {
-        let permissions = PermissionSvc::new(state.mappers.permission.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let permissions = state.svcs.permission.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(permissions)))
     }
@@ -72,10 +65,7 @@ impl PermissionCtl {
         State(state): State<Arc<AppState>>,
         Json(permission_dto): Json<PermissionDto>,
     ) -> ResultJson<i64> {
-        let permission_id = PermissionSvc::new(state.mappers.permission.clone())
-            .save(permission_dto)
-            .await
-            .map_err(internal_err)?;
+        let permission_id = state.svcs.permission.save(permission_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(permission_id)))
     }
 
@@ -91,10 +81,7 @@ impl PermissionCtl {
         Path(permission_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<PermissionVo>> {
-        let permission = PermissionSvc::new(state.mappers.permission.clone())
-            .get_by_id(permission_id)
-            .await
-            .map_err(internal_err)?;
+        let permission = state.svcs.permission.get_by_id(permission_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(permission)))
     }
@@ -111,10 +98,7 @@ impl PermissionCtl {
         State(state): State<Arc<AppState>>,
         Json(permission_dto): Json<PermissionDto>,
     ) -> ResultJson<u64> {
-        let result = PermissionSvc::new(state.mappers.permission.clone())
-            .update_by_id(permission_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.permission.update_by_id(permission_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl PermissionCtl {
         State(state): State<Arc<AppState>>,
         Json(permission_dto): Json<PermissionDto>,
     ) -> ResultJson<u64> {
-        let result = PermissionSvc::new(state.mappers.permission.clone())
-            .delete_by_ids(permission_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.permission.delete_by_ids(permission_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl PermissionCtl {
         State(state): State<Arc<AppState>>,
         Json(permission_dto): Json<PermissionDto>,
     ) -> ResultJson<u64> {
-        let result = PermissionSvc::new(state.mappers.permission.clone())
-            .remove_by_ids(permission_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.permission.remove_by_ids(permission_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

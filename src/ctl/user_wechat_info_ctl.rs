@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::user_wechat_info_pojo::*,
-    svc::user_wechat_info_svc::UserWechatInfoSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl UserWechatInfoCtl {
         Query(condition): Query<UserWechatInfoCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<UserWechatInfoVo>> {
-        let user_wechat_infos = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_wechat_infos = state.svcs.user_wechat_info.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_wechat_infos)))
     }
@@ -52,10 +48,7 @@ impl UserWechatInfoCtl {
         Query(condition): Query<UserWechatInfoCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<UserWechatInfoVo>> {
-        let user_wechat_infos = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_wechat_infos = state.svcs.user_wechat_info.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_wechat_infos)))
     }
@@ -72,10 +65,7 @@ impl UserWechatInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_wechat_info_dto): Json<UserWechatInfoDto>,
     ) -> ResultJson<i64> {
-        let user_wechat_info_id = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .save(user_wechat_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let user_wechat_info_id = state.svcs.user_wechat_info.save(user_wechat_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(user_wechat_info_id)))
     }
 
@@ -91,10 +81,7 @@ impl UserWechatInfoCtl {
         Path(user_wechat_info_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<UserWechatInfoVo>> {
-        let user_wechat_info = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .get_by_id(user_wechat_info_id)
-            .await
-            .map_err(internal_err)?;
+        let user_wechat_info = state.svcs.user_wechat_info.get_by_id(user_wechat_info_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_wechat_info)))
     }
@@ -111,10 +98,7 @@ impl UserWechatInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_wechat_info_dto): Json<UserWechatInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .update_by_id(user_wechat_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_wechat_info.update_by_id(user_wechat_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl UserWechatInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_wechat_info_dto): Json<UserWechatInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .delete_by_ids(user_wechat_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_wechat_info.delete_by_ids(user_wechat_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl UserWechatInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_wechat_info_dto): Json<UserWechatInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserWechatInfoSvc::new(state.mappers.user_wechat_info.clone())
-            .remove_by_ids(user_wechat_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_wechat_info.remove_by_ids(user_wechat_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

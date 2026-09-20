@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::department_pojo::*,
-    svc::department_svc::DepartmentSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl DepartmentCtl {
         Query(condition): Query<DepartmentCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<DepartmentVo>> {
-        let departments = DepartmentSvc::new(state.mappers.department.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let departments = state.svcs.department.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(departments)))
     }
@@ -52,10 +48,7 @@ impl DepartmentCtl {
         Query(condition): Query<DepartmentCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<DepartmentVo>> {
-        let departments = DepartmentSvc::new(state.mappers.department.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let departments = state.svcs.department.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(departments)))
     }
@@ -72,10 +65,7 @@ impl DepartmentCtl {
         State(state): State<Arc<AppState>>,
         Json(department_dto): Json<DepartmentDto>,
     ) -> ResultJson<i64> {
-        let department_id = DepartmentSvc::new(state.mappers.department.clone())
-            .save(department_dto)
-            .await
-            .map_err(internal_err)?;
+        let department_id = state.svcs.department.save(department_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(department_id)))
     }
 
@@ -91,10 +81,7 @@ impl DepartmentCtl {
         Path(department_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<DepartmentVo>> {
-        let department = DepartmentSvc::new(state.mappers.department.clone())
-            .get_by_id(department_id)
-            .await
-            .map_err(internal_err)?;
+        let department = state.svcs.department.get_by_id(department_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(department)))
     }
@@ -111,10 +98,7 @@ impl DepartmentCtl {
         State(state): State<Arc<AppState>>,
         Json(department_dto): Json<DepartmentDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentSvc::new(state.mappers.department.clone())
-            .update_by_id(department_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department.update_by_id(department_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl DepartmentCtl {
         State(state): State<Arc<AppState>>,
         Json(department_dto): Json<DepartmentDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentSvc::new(state.mappers.department.clone())
-            .delete_by_ids(department_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department.delete_by_ids(department_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl DepartmentCtl {
         State(state): State<Arc<AppState>>,
         Json(department_dto): Json<DepartmentDto>,
     ) -> ResultJson<u64> {
-        let result = DepartmentSvc::new(state.mappers.department.clone())
-            .remove_by_ids(department_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.department.remove_by_ids(department_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::organization_pojo::*,
-    svc::organization_svc::OrganizationSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl OrganizationCtl {
         Query(condition): Query<OrganizationCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<OrganizationVo>> {
-        let organizations = OrganizationSvc::new(state.mappers.organization.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let organizations = state.svcs.organization.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organizations)))
     }
@@ -52,10 +48,7 @@ impl OrganizationCtl {
         Query(condition): Query<OrganizationCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<OrganizationVo>> {
-        let organizations = OrganizationSvc::new(state.mappers.organization.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let organizations = state.svcs.organization.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organizations)))
     }
@@ -72,10 +65,7 @@ impl OrganizationCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_dto): Json<OrganizationDto>,
     ) -> ResultJson<i64> {
-        let organization_id = OrganizationSvc::new(state.mappers.organization.clone())
-            .save(organization_dto)
-            .await
-            .map_err(internal_err)?;
+        let organization_id = state.svcs.organization.save(organization_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(organization_id)))
     }
 
@@ -91,10 +81,7 @@ impl OrganizationCtl {
         Path(organization_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<OrganizationVo>> {
-        let organization = OrganizationSvc::new(state.mappers.organization.clone())
-            .get_by_id(organization_id)
-            .await
-            .map_err(internal_err)?;
+        let organization = state.svcs.organization.get_by_id(organization_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(organization)))
     }
@@ -111,10 +98,7 @@ impl OrganizationCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_dto): Json<OrganizationDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationSvc::new(state.mappers.organization.clone())
-            .update_by_id(organization_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization.update_by_id(organization_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl OrganizationCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_dto): Json<OrganizationDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationSvc::new(state.mappers.organization.clone())
-            .delete_by_ids(organization_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization.delete_by_ids(organization_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl OrganizationCtl {
         State(state): State<Arc<AppState>>,
         Json(organization_dto): Json<OrganizationDto>,
     ) -> ResultJson<u64> {
-        let result = OrganizationSvc::new(state.mappers.organization.clone())
-            .remove_by_ids(organization_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.organization.remove_by_ids(organization_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

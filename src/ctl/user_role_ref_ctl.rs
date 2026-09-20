@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::user_role_ref_pojo::*,
-    svc::user_role_ref_svc::UserRoleRefSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl UserRoleRefCtl {
         Query(condition): Query<UserRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<UserRoleRefVo>> {
-        let user_role_refs = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_role_refs = state.svcs.user_role_ref.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_role_refs)))
     }
@@ -52,10 +48,7 @@ impl UserRoleRefCtl {
         Query(condition): Query<UserRoleRefCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<UserRoleRefVo>> {
-        let user_role_refs = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_role_refs = state.svcs.user_role_ref.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_role_refs)))
     }
@@ -72,10 +65,7 @@ impl UserRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_role_ref_dto): Json<UserRoleRefDto>,
     ) -> ResultJson<i64> {
-        let user_role_ref_id = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .save(user_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let user_role_ref_id = state.svcs.user_role_ref.save(user_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(user_role_ref_id)))
     }
 
@@ -91,10 +81,7 @@ impl UserRoleRefCtl {
         Path(user_role_ref_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<UserRoleRefVo>> {
-        let user_role_ref = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .get_by_id(user_role_ref_id)
-            .await
-            .map_err(internal_err)?;
+        let user_role_ref = state.svcs.user_role_ref.get_by_id(user_role_ref_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_role_ref)))
     }
@@ -111,10 +98,7 @@ impl UserRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_role_ref_dto): Json<UserRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .update_by_id(user_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_role_ref.update_by_id(user_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl UserRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_role_ref_dto): Json<UserRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .delete_by_ids(user_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_role_ref.delete_by_ids(user_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl UserRoleRefCtl {
         State(state): State<Arc<AppState>>,
         Json(user_role_ref_dto): Json<UserRoleRefDto>,
     ) -> ResultJson<u64> {
-        let result = UserRoleRefSvc::new(state.mappers.user_role_ref.clone())
-            .remove_by_ids(user_role_ref_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_role_ref.remove_by_ids(user_role_ref_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

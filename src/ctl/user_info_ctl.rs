@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::user_info_pojo::*,
-    svc::user_info_svc::UserInfoSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl UserInfoCtl {
         Query(condition): Query<UserInfoCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<UserInfoVo>> {
-        let user_infos = UserInfoSvc::new(state.mappers.user_info.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_infos = state.svcs.user_info.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_infos)))
     }
@@ -52,10 +48,7 @@ impl UserInfoCtl {
         Query(condition): Query<UserInfoCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<UserInfoVo>> {
-        let user_infos = UserInfoSvc::new(state.mappers.user_info.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let user_infos = state.svcs.user_info.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_infos)))
     }
@@ -72,10 +65,7 @@ impl UserInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_info_dto): Json<UserInfoDto>,
     ) -> ResultJson<i64> {
-        let user_info_id = UserInfoSvc::new(state.mappers.user_info.clone())
-            .save(user_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let user_info_id = state.svcs.user_info.save(user_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(user_info_id)))
     }
 
@@ -91,10 +81,7 @@ impl UserInfoCtl {
         Path(user_info_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<UserInfoVo>> {
-        let user_info = UserInfoSvc::new(state.mappers.user_info.clone())
-            .get_by_id(user_info_id)
-            .await
-            .map_err(internal_err)?;
+        let user_info = state.svcs.user_info.get_by_id(user_info_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(user_info)))
     }
@@ -111,10 +98,7 @@ impl UserInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_info_dto): Json<UserInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserInfoSvc::new(state.mappers.user_info.clone())
-            .update_by_id(user_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_info.update_by_id(user_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl UserInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_info_dto): Json<UserInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserInfoSvc::new(state.mappers.user_info.clone())
-            .delete_by_ids(user_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_info.delete_by_ids(user_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl UserInfoCtl {
         State(state): State<Arc<AppState>>,
         Json(user_info_dto): Json<UserInfoDto>,
     ) -> ResultJson<u64> {
-        let result = UserInfoSvc::new(state.mappers.user_info.clone())
-            .remove_by_ids(user_info_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.user_info.remove_by_ids(user_info_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

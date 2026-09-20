@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::group_pojo::*,
-    svc::group_svc::GroupSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl GroupCtl {
         Query(condition): Query<GroupCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<GroupVo>> {
-        let groups = GroupSvc::new(state.mappers.group.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let groups = state.svcs.group.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(groups)))
     }
@@ -52,10 +48,7 @@ impl GroupCtl {
         Query(condition): Query<GroupCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<GroupVo>> {
-        let groups = GroupSvc::new(state.mappers.group.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let groups = state.svcs.group.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(groups)))
     }
@@ -72,10 +65,7 @@ impl GroupCtl {
         State(state): State<Arc<AppState>>,
         Json(group_dto): Json<GroupDto>,
     ) -> ResultJson<i64> {
-        let group_id = GroupSvc::new(state.mappers.group.clone())
-            .save(group_dto)
-            .await
-            .map_err(internal_err)?;
+        let group_id = state.svcs.group.save(group_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(group_id)))
     }
 
@@ -91,10 +81,7 @@ impl GroupCtl {
         Path(group_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<GroupVo>> {
-        let group = GroupSvc::new(state.mappers.group.clone())
-            .get_by_id(group_id)
-            .await
-            .map_err(internal_err)?;
+        let group = state.svcs.group.get_by_id(group_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(group)))
     }
@@ -111,10 +98,7 @@ impl GroupCtl {
         State(state): State<Arc<AppState>>,
         Json(group_dto): Json<GroupDto>,
     ) -> ResultJson<u64> {
-        let result = GroupSvc::new(state.mappers.group.clone())
-            .update_by_id(group_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group.update_by_id(group_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl GroupCtl {
         State(state): State<Arc<AppState>>,
         Json(group_dto): Json<GroupDto>,
     ) -> ResultJson<u64> {
-        let result = GroupSvc::new(state.mappers.group.clone())
-            .delete_by_ids(group_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group.delete_by_ids(group_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl GroupCtl {
         State(state): State<Arc<AppState>>,
         Json(group_dto): Json<GroupDto>,
     ) -> ResultJson<u64> {
-        let result = GroupSvc::new(state.mappers.group.clone())
-            .remove_by_ids(group_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.group.remove_by_ids(group_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::{mapper::organization_mapper::{OrganizationMapperTrait}, pojo::organization_pojo::*, util::paged_struct::PageData};
+use crate::{
+    mapper::OrganizationMapperTrait,
+    pojo::organization_pojo::*,
+    util::paged_struct::PageData,
+};
 use sea_orm::DbErr;
 
 pub struct OrganizationSvc {

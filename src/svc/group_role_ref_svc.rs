@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::{ mapper::{GroupRoleRefMapperTrait}, pojo::group_role_ref_pojo::*, util::paged_struct::PageData};
+use crate::{
+    mapper::GroupRoleRefMapperTrait,
+    pojo::group_role_ref_pojo::*,
+    util::paged_struct::PageData,
+};
 use sea_orm::DbErr;
 
 pub struct GroupRoleRefSvc {

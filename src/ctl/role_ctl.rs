@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::role_pojo::*,
-    svc::role_svc::RoleSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl RoleCtl {
         Query(condition): Query<RoleCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<RoleVo>> {
-        let roles = RoleSvc::new(state.mappers.role.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let roles = state.svcs.role.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(roles)))
     }
@@ -52,10 +48,7 @@ impl RoleCtl {
         Query(condition): Query<RoleCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<RoleVo>> {
-        let roles = RoleSvc::new(state.mappers.role.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let roles = state.svcs.role.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(roles)))
     }
@@ -72,10 +65,7 @@ impl RoleCtl {
         State(state): State<Arc<AppState>>,
         Json(role_dto): Json<RoleDto>,
     ) -> ResultJson<i64> {
-        let role_id = RoleSvc::new(state.mappers.role.clone())
-            .save(role_dto)
-            .await
-            .map_err(internal_err)?;
+        let role_id = state.svcs.role.save(role_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(role_id)))
     }
 
@@ -91,10 +81,7 @@ impl RoleCtl {
         Path(role_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<RoleVo>> {
-        let role = RoleSvc::new(state.mappers.role.clone())
-            .get_by_id(role_id)
-            .await
-            .map_err(internal_err)?;
+        let role = state.svcs.role.get_by_id(role_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(role)))
     }
@@ -111,10 +98,7 @@ impl RoleCtl {
         State(state): State<Arc<AppState>>,
         Json(role_dto): Json<RoleDto>,
     ) -> ResultJson<u64> {
-        let result = RoleSvc::new(state.mappers.role.clone())
-            .update_by_id(role_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.role.update_by_id(role_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl RoleCtl {
         State(state): State<Arc<AppState>>,
         Json(role_dto): Json<RoleDto>,
     ) -> ResultJson<u64> {
-        let result = RoleSvc::new(state.mappers.role.clone())
-            .delete_by_ids(role_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.role.delete_by_ids(role_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl RoleCtl {
         State(state): State<Arc<AppState>>,
         Json(role_dto): Json<RoleDto>,
     ) -> ResultJson<u64> {
-        let result = RoleSvc::new(state.mappers.role.clone())
-            .remove_by_ids(role_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.role.remove_by_ids(role_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }

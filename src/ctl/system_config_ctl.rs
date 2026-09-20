@@ -7,7 +7,6 @@ use axum::{
 
 use crate::{
     pojo::system_config_pojo::*,
-    svc::system_config_svc::SystemConfigSvc,
     util::{exception::internal_err, paged_struct::PageData, result_struct::RespResult},
     AppState, ResultJson,
 };
@@ -32,10 +31,7 @@ impl SystemConfigCtl {
         Query(condition): Query<SystemConfigCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Vec<SystemConfigVo>> {
-        let system_configs = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .list(condition)
-            .await
-            .map_err(internal_err)?;
+        let system_configs = state.svcs.system_config.list(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(system_configs)))
     }
@@ -52,10 +48,7 @@ impl SystemConfigCtl {
         Query(condition): Query<SystemConfigCondition>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<PageData<SystemConfigVo>> {
-        let system_configs = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .page(condition)
-            .await
-            .map_err(internal_err)?;
+        let system_configs = state.svcs.system_config.page(condition).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(system_configs)))
     }
@@ -72,10 +65,7 @@ impl SystemConfigCtl {
         State(state): State<Arc<AppState>>,
         Json(system_config_dto): Json<SystemConfigDto>,
     ) -> ResultJson<i64> {
-        let system_config_id = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .save(system_config_dto)
-            .await
-            .map_err(internal_err)?;
+        let system_config_id = state.svcs.system_config.save(system_config_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(system_config_id)))
     }
 
@@ -91,10 +81,7 @@ impl SystemConfigCtl {
         Path(system_config_id): Path<i64>,
         State(state): State<Arc<AppState>>,
     ) -> ResultJson<Option<SystemConfigVo>> {
-        let system_config = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .get_by_id(system_config_id)
-            .await
-            .map_err(internal_err)?;
+        let system_config = state.svcs.system_config.get_by_id(system_config_id).await.map_err(internal_err)?;
 
         Ok(Json(RespResult::ok(system_config)))
     }
@@ -111,10 +98,7 @@ impl SystemConfigCtl {
         State(state): State<Arc<AppState>>,
         Json(system_config_dto): Json<SystemConfigDto>,
     ) -> ResultJson<u64> {
-        let result = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .update_by_id(system_config_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.system_config.update_by_id(system_config_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -130,10 +114,7 @@ impl SystemConfigCtl {
         State(state): State<Arc<AppState>>,
         Json(system_config_dto): Json<SystemConfigDto>,
     ) -> ResultJson<u64> {
-        let result = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .delete_by_ids(system_config_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.system_config.delete_by_ids(system_config_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 
@@ -149,10 +130,7 @@ impl SystemConfigCtl {
         State(state): State<Arc<AppState>>,
         Json(system_config_dto): Json<SystemConfigDto>,
     ) -> ResultJson<u64> {
-        let result = SystemConfigSvc::new(state.mappers.systemc_config.clone())
-            .remove_by_ids(system_config_dto)
-            .await
-            .map_err(internal_err)?;
+        let result = state.svcs.system_config.remove_by_ids(system_config_dto).await.map_err(internal_err)?;
         Ok(Json(RespResult::ok(result)))
     }
 }
