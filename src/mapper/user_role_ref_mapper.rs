@@ -6,13 +6,12 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
     QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
 
 use crate::entities::{prelude::*, *};
+use crate::pojo::user_role_ref_pojo::*;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::user_role_ref_pojo::*, AppState};
 use sea_orm::Condition;
 
 /// Trait defining the interface for user role ref-related database operations

@@ -1,18 +1,16 @@
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
     QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
 
 use crate::entities::{prelude::*, *};
+use crate::pojo::position_role_ref_pojo::*;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::position_role_ref_pojo::*, AppState};
 use sea_orm::Condition;
 
 /// Trait defining the interface for position role ref-related database operations
