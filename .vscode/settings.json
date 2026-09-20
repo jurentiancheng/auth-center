@@ -1,0 +1,14 @@
+{
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  // 可选：让导入按模块粒度合并，避免删完后留下一堆零散 use
+  "rust-analyzer.imports.granularity.group": "module",
+  // 可选：保存时跑检查，这样未使用的 use 才能被实时标出来
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.checkOnSave": true
+}

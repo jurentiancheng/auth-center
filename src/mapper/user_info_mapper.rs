@@ -1,13 +1,13 @@
 use anyhow::Result;
+use once_cell::sync::OnceCell;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
+    QueryFilter, QuerySelect, QueryTrait,
 };
 use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
@@ -17,7 +17,7 @@ use sea_orm::Condition;
 
 /// Trait defining the interface for user info-related database operations
 #[async_trait::async_trait]
-pub trait UserInfoMapperTrait {
+pub trait UserInfoMapperTrait: Send + Sync {
     async fn list(&self, condition: UserInfoCondition) -> Result<Vec<UserInfoVo>, DbErr>;
     async fn page(&self, condition: UserInfoCondition) -> Result<PageData<UserInfoVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<UserInfoVo>, DbErr>;
@@ -29,17 +29,12 @@ pub trait UserInfoMapperTrait {
 
 /// Implementation of UserInfoMapperTrait
 pub struct UserInfoMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl UserInfoMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static UserInfoMapper {
-        static INSTANCE: OnceCell<UserInfoMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| UserInfoMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &UserInfoCondition) -> Condition {
@@ -102,12 +97,12 @@ impl UserInfoMapper {
             query_wrapper = query_wrapper.add(user_info::Column::OrgCode.eq(org_code));
         };
         if let Some(department_code) = &condition.department_code {
-            query_wrapper = query_wrapper.add(user_info::Column::DepartmentCode.eq(department_code));
+            query_wrapper =
+                query_wrapper.add(user_info::Column::DepartmentCode.eq(department_code));
         };
         if let Some(position_code) = &condition.position_code {
             query_wrapper = query_wrapper.add(user_info::Column::PositionCode.eq(position_code));
         };
-
 
         query_wrapper
     }
@@ -136,7 +131,7 @@ impl UserInfoMapperTrait for UserInfoMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<UserInfoVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(user_info)
@@ -148,11 +143,11 @@ impl UserInfoMapperTrait for UserInfoMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<UserInfoVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = UserInfo::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, user_info, total).await
     }
@@ -160,7 +155,7 @@ impl UserInfoMapperTrait for UserInfoMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<UserInfoVo>, DbErr> {
         let user_info_opt = UserInfo::find_by_id(rec_id)
             .into_model::<UserInfoVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(user_info_opt)
     }
@@ -171,7 +166,7 @@ impl UserInfoMapperTrait for UserInfoMapper {
         let mut user_info_actmod = user_info::ActiveModel::from_json(user_info_dtoc)?;
         user_info_actmod.set(user_info::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         user_info_actmod.set(user_info::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = UserInfo::insert(user_info_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = UserInfo::insert(user_info_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -182,7 +177,7 @@ impl UserInfoMapperTrait for UserInfoMapper {
         let update_result = UserInfo::update_many()
             .set(user_info_actmod)
             .filter(user_info::Column::Id.eq(user_info_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -192,7 +187,7 @@ impl UserInfoMapperTrait for UserInfoMapper {
         let update_result = UserInfo::update_many()
             .col_expr(user_info::Column::IsDel, Expr::value(-1))
             .filter(user_info::Column::Id.is_in(user_info_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -201,8 +196,8 @@ impl UserInfoMapperTrait for UserInfoMapper {
         info!("user_info_json is {:?}", user_info_dto);
         let update_result = UserInfo::delete_many()
             .filter(user_info::Column::Id.is_in(user_info_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
-} 
+}

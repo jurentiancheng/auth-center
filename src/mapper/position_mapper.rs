@@ -2,22 +2,21 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
+    QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
+
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
+use crate::pojo::position_pojo::*;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::position_pojo::*, AppState};
 use sea_orm::Condition;
 
 /// Trait defining the interface for position-related database operations
 #[async_trait::async_trait]
-pub trait PositionMapperTrait {
+pub trait PositionMapperTrait: Send + Sync {
     async fn list(&self, condition: PositionCondition) -> Result<Vec<PositionVo>, DbErr>;
     async fn page(&self, condition: PositionCondition) -> Result<PageData<PositionVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<PositionVo>, DbErr>;
@@ -29,17 +28,12 @@ pub trait PositionMapperTrait {
 
 /// Implementation of PositionMapperTrait
 pub struct PositionMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl PositionMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static PositionMapper {
-        static INSTANCE: OnceCell<PositionMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| PositionMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &PositionCondition) -> Condition {
@@ -84,7 +78,7 @@ impl PositionMapperTrait for PositionMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<PositionVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(position)
@@ -96,11 +90,11 @@ impl PositionMapperTrait for PositionMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<PositionVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Position::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, position, total).await
     }
@@ -108,7 +102,7 @@ impl PositionMapperTrait for PositionMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<PositionVo>, DbErr> {
         let position_opt = Position::find_by_id(rec_id)
             .into_model::<PositionVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(position_opt)
     }
@@ -119,7 +113,7 @@ impl PositionMapperTrait for PositionMapper {
         let mut position_actmod = position::ActiveModel::from_json(position_dtoc)?;
         position_actmod.set(position::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         position_actmod.set(position::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Position::insert(position_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = Position::insert(position_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -130,7 +124,7 @@ impl PositionMapperTrait for PositionMapper {
         let update_result = Position::update_many()
             .set(position_actmod)
             .filter(position::Column::Id.eq(position_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -140,7 +134,7 @@ impl PositionMapperTrait for PositionMapper {
         let update_result = Position::update_many()
             .col_expr(position::Column::IsDel, Expr::value(-1))
             .filter(position::Column::Id.is_in(position_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -149,8 +143,8 @@ impl PositionMapperTrait for PositionMapper {
         info!("position_json is {:?}", position_dto);
         let update_result = Position::delete_many()
             .filter(position::Column::Id.is_in(position_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
-} 
+}

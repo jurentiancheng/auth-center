@@ -2,22 +2,20 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
+    QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
+use crate::pojo::role_pojo::*;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::role_pojo::*, AppState};
 use sea_orm::Condition;
 
 /// Trait defining the interface for role-related database operations
 #[async_trait::async_trait]
-pub trait RoleMapperTrait {
+pub trait RoleMapperTrait: Send + Sync {
     async fn list(&self, condition: RoleCondition) -> Result<Vec<RoleVo>, DbErr>;
     async fn page(&self, condition: RoleCondition) -> Result<PageData<RoleVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<RoleVo>, DbErr>;
@@ -29,17 +27,12 @@ pub trait RoleMapperTrait {
 
 /// Implementation of RoleMapperTrait
 pub struct RoleMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl RoleMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static RoleMapper {
-        static INSTANCE: OnceCell<RoleMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| RoleMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &RoleCondition) -> Condition {
@@ -92,7 +85,7 @@ impl RoleMapperTrait for RoleMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<RoleVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(role)
@@ -104,11 +97,11 @@ impl RoleMapperTrait for RoleMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<RoleVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Role::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, role, total).await
     }
@@ -116,7 +109,7 @@ impl RoleMapperTrait for RoleMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<RoleVo>, DbErr> {
         let role_opt = Role::find_by_id(rec_id)
             .into_model::<RoleVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(role_opt)
     }
@@ -127,7 +120,7 @@ impl RoleMapperTrait for RoleMapper {
         let mut role_actmod = role::ActiveModel::from_json(role_dtoc)?;
         role_actmod.set(role::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         role_actmod.set(role::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Role::insert(role_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = Role::insert(role_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -138,7 +131,7 @@ impl RoleMapperTrait for RoleMapper {
         let update_result = Role::update_many()
             .set(role_actmod)
             .filter(role::Column::Id.eq(role_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -148,7 +141,7 @@ impl RoleMapperTrait for RoleMapper {
         let update_result = Role::update_many()
             .col_expr(role::Column::IsDel, Expr::value(-1))
             .filter(role::Column::Id.is_in(role_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -157,8 +150,8 @@ impl RoleMapperTrait for RoleMapper {
         info!("role_json is {:?}", role_dto);
         let update_result = Role::delete_many()
             .filter(role::Column::Id.is_in(role_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
-} 
+}

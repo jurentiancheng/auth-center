@@ -1,23 +1,20 @@
+use crate::entities::{prelude::*, *};
+use crate::pojo::user_pojo::*;
+use crate::util::paged_struct::{PageData, PageInfo, Pageable};
+use crate::util::IntoJsonValue;
 use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
-};
-use std::sync::Arc;
-use tracing::info;
-use once_cell::sync::OnceCell;
-
-use crate::entities::{prelude::*, *};
-use crate::util::paged_struct::{PageData, PageInfo, Pageable};
-use crate::util::IntoJsonValue;
-use crate::{pojo::user_pojo::*, AppState};
 use sea_orm::Condition;
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
+    QueryFilter, QuerySelect, QueryTrait,
+};
+use tracing::info;
 
 /// Trait defining the interface for user-related database operations
 #[async_trait::async_trait]
-pub trait UserMapperTrait {
+pub trait UserMapperTrait: Send + Sync {
     async fn list(&self, condition: UserCondition) -> Result<Vec<UserVo>, DbErr>;
     async fn page(&self, condition: UserCondition) -> Result<PageData<UserVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<UserVo>, DbErr>;
@@ -29,17 +26,12 @@ pub trait UserMapperTrait {
 
 /// Implementation of UserMapperTrait
 pub struct UserMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl UserMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static UserMapper {
-        static INSTANCE: OnceCell<UserMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| UserMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &UserCondition) -> Condition {
@@ -80,7 +72,7 @@ impl UserMapperTrait for UserMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<UserVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(user)
@@ -92,11 +84,11 @@ impl UserMapperTrait for UserMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<UserVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = User::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, user, total).await
     }
@@ -104,7 +96,7 @@ impl UserMapperTrait for UserMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<UserVo>, DbErr> {
         let user_opt = User::find_by_id(rec_id)
             .into_model::<UserVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(user_opt)
     }
@@ -115,7 +107,7 @@ impl UserMapperTrait for UserMapper {
         let mut user_actmod = user::ActiveModel::from_json(user_dtoc)?;
         user_actmod.set(user::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
         user_actmod.set(user::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = User::insert(user_actmod).exec(&self.state.mysql_pool).await?;
+        let inserted_result = User::insert(user_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -126,7 +118,7 @@ impl UserMapperTrait for UserMapper {
         let update_result = User::update_many()
             .set(user_actmod)
             .filter(user::Column::Id.eq(user_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -136,7 +128,7 @@ impl UserMapperTrait for UserMapper {
         let update_result = User::update_many()
             .col_expr(user::Column::IsDel, Expr::value(-1))
             .filter(user::Column::Id.is_in(user_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -145,7 +137,7 @@ impl UserMapperTrait for UserMapper {
         info!("user_json is {:?}", user_dto);
         let update_result = User::delete_many()
             .filter(user::Column::Id.is_in(user_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }

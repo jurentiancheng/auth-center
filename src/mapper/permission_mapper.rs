@@ -2,22 +2,20 @@ use anyhow::Result;
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Cond;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    QueryTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait,
+    QueryFilter, QuerySelect, QueryTrait,
 };
-use std::sync::Arc;
 use tracing::info;
-use once_cell::sync::OnceCell;
 
 use crate::entities::{prelude::*, *};
+use crate::pojo::permission_pojo::*;
 use crate::util::paged_struct::{PageData, PageInfo, Pageable};
 use crate::util::IntoJsonValue;
-use crate::{pojo::permission_pojo::*, AppState};
 use sea_orm::Condition;
 
 /// Trait defining the interface for permission-related database operations
 #[async_trait::async_trait]
-pub trait PermissionMapperTrait {
+pub trait PermissionMapperTrait: Send + Sync {
     async fn list(&self, condition: PermissionCondition) -> Result<Vec<PermissionVo>, DbErr>;
     async fn page(&self, condition: PermissionCondition) -> Result<PageData<PermissionVo>, DbErr>;
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<PermissionVo>, DbErr>;
@@ -29,17 +27,12 @@ pub trait PermissionMapperTrait {
 
 /// Implementation of PermissionMapperTrait
 pub struct PermissionMapper {
-    state: Arc<AppState>,
+    db: DatabaseConnection,
 }
 
 impl PermissionMapper {
-    pub fn new(state: Arc<AppState>) -> Self {
-        Self { state }
-    }
-
-    pub fn get_instance(state: Arc<AppState>) -> &'static PermissionMapper {
-        static INSTANCE: OnceCell<PermissionMapper> = OnceCell::new();
-        INSTANCE.get_or_init(|| PermissionMapper::new(state))
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn build_query_wrapper(&self, condition: &PermissionCondition) -> Condition {
@@ -59,7 +52,7 @@ impl PermissionMapper {
         if let Some(application) = &condition.application {
             query_wrapper = query_wrapper.add(permission::Column::Application.eq(application));
         };
-        
+
         query_wrapper
     }
 
@@ -87,7 +80,7 @@ impl PermissionMapperTrait for PermissionMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<PermissionVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
 
         Ok(permission)
@@ -99,11 +92,11 @@ impl PermissionMapperTrait for PermissionMapper {
             .apply_if(condition.get_size(), QuerySelect::limit)
             .apply_if(condition.get_offset(), QuerySelect::offset::<u64>)
             .into_model::<PermissionVo>()
-            .all(&self.state.mysql_pool)
+            .all(&self.db)
             .await?;
         let total = Permission::find()
             .filter(self.build_query_wrapper(&condition))
-            .count(&self.state.mysql_pool)
+            .count(&self.db)
             .await?;
         self.convert_page_data(&condition, permission, total).await
     }
@@ -111,7 +104,7 @@ impl PermissionMapperTrait for PermissionMapper {
     async fn get_by_id(&self, rec_id: i64) -> Result<Option<PermissionVo>, DbErr> {
         let permission_opt = Permission::find_by_id(rec_id)
             .into_model::<PermissionVo>()
-            .one(&self.state.mysql_pool)
+            .one(&self.db)
             .await?;
         Ok(permission_opt)
     }
@@ -120,9 +113,15 @@ impl PermissionMapperTrait for PermissionMapper {
         let permission_dtoc = permission_dto.into_json_with_snake_key();
         info!("permission_json is {:?}", permission_dtoc);
         let mut permission_actmod = permission::ActiveModel::from_json(permission_dtoc)?;
-        permission_actmod.set(permission::Column::CreateBy, sea_orm::Value::BigInt(Some(0)));
-        permission_actmod.set(permission::Column::UpdateBy, sea_orm::Value::BigInt(Some(0)));
-        let inserted_result = Permission::insert(permission_actmod).exec(&self.state.mysql_pool).await?;
+        permission_actmod.set(
+            permission::Column::CreateBy,
+            sea_orm::Value::BigInt(Some(0)),
+        );
+        permission_actmod.set(
+            permission::Column::UpdateBy,
+            sea_orm::Value::BigInt(Some(0)),
+        );
+        let inserted_result = Permission::insert(permission_actmod).exec(&self.db).await?;
         Ok(inserted_result.last_insert_id)
     }
 
@@ -133,7 +132,7 @@ impl PermissionMapperTrait for PermissionMapper {
         let update_result = Permission::update_many()
             .set(permission_actmod)
             .filter(permission::Column::Id.eq(permission_dto.rec_id))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -143,7 +142,7 @@ impl PermissionMapperTrait for PermissionMapper {
         let update_result = Permission::update_many()
             .col_expr(permission::Column::IsDel, Expr::value(-1))
             .filter(permission::Column::Id.is_in(permission_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
@@ -152,8 +151,8 @@ impl PermissionMapperTrait for PermissionMapper {
         info!("permission_json is {:?}", permission_dto);
         let update_result = Permission::delete_many()
             .filter(permission::Column::Id.is_in(permission_dto.rec_ids.unwrap()))
-            .exec(&self.state.mysql_pool)
+            .exec(&self.db)
             .await?;
         Ok(update_result.rows_affected)
     }
-} 
+}
