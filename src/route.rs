@@ -1,6 +1,9 @@
 use crate::ctl;
 use axum::{ routing::{get, post, put}, Router};
 use std::error::Error;
+use std::sync::Arc;
+
+use crate::config::Config;
 use crate::init_status;
 
 use ctl::{
@@ -23,7 +26,7 @@ use ctl::{
 };
 
 
-pub async fn build_app_route() -> Result<Router, Box<dyn Error>> {
+pub async fn build_app_route(config: Arc<Config>) -> Result<Router, Box<dyn Error>> {
     
     let app = Router::new()
         // User routes
@@ -219,6 +222,6 @@ pub async fn build_app_route() -> Result<Router, Box<dyn Error>> {
         .route("/organizationRoleRef/page", get(OrganizationRoleRefCtl::page))
         .route("/organizationRoleRef/:id", get(OrganizationRoleRefCtl::get_by_id))
 
-        .with_state(init_status().await?);
+        .with_state(init_status(config).await?);
     Ok(app)
 }
